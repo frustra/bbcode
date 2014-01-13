@@ -50,28 +50,10 @@ func newLexer(str string) *lexer {
 }
 
 func (l *lexer) Lex(lval *yySymType) int {
-	ret := l.LexImpl(lval)
-	/*t := map[int]string{}
-	t[TEXT] = "TEXT"
-	t[ID] = "ID"
-	if name, ok := t[ret]; ok {
-		fmt.Print(name, " ")
-	} else if ret > 0 {
-		fmt.Print(string([]byte{byte(ret)}), " ")
-	} else {
-		fmt.Print("NULL ")
-	}
-	fmt.Println("")
-	fmt.Println(l.state) */
-	return ret
-}
-
-func (l *lexer) LexImpl(lval *yySymType) int {
 	if len(l.str) <= 0 {
 		return 0
 	}
 	var c byte = l.str[0]
-	//fmt.Print(string(l.str), " -> ")
 
 	switch l.state {
 	case TAG_START_STATE:

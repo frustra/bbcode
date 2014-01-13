@@ -2,9 +2,10 @@
 // Use of this source code is governed by the MIT
 // license that can be found in the LICENSE file.
 
+// Package bbcode implements a parser and HTML generator for BBCode.
 package bbcode
 
-// Compiles a string of BBCode to HTML
+// Compile transforms a string of BBCode to HTML
 func Compile(str string) (string, error) {
 	lex := newLexer(str)
 	yyParse(lex)
