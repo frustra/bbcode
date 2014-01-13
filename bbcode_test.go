@@ -27,9 +27,13 @@ func TestCompile(t *testing.T) {
 }
 
 var sanitizationTests = map[string]string{
-	`<script>`:                     `&lt;script&gt;`,
-	`[url]<script>[/url]`:          `<a href="%3Cscript%3E">&lt;script&gt;</a>`,
+	`<script>`:            `&lt;script&gt;`,
+	`[url]<script>[/url]`: `<a href="%3Cscript%3E">&lt;script&gt;</a>`,
+
 	`[url=<script>]<script>[/url]`: `<a href="%3Cscript%3E">&lt;script&gt;</a>`,
+	`[img=<script>]<script>[/url]`: `<img src="%3Cscript%3E" alt="&lt;script&gt;"/>`,
+
+	`[url=http://a.b/z?\]link[/url]`: `<a href="http://a.b/z?%5C">link</a>`,
 }
 
 func TestSanitization(t *testing.T) {

@@ -32,7 +32,7 @@ func (t *htmlTag) string() string {
 	}
 	attrStrings := make([]string, 0, len(t.attrs))
 	for key, value := range t.attrs {
-		attrStrings = append(attrStrings, fmt.Sprintf(`%s="%s"`, key, escapeQuotes(value)))
+		attrStrings = append(attrStrings, fmt.Sprintf(`%s="%s"`, key, escapeQuotes(sanitize(value))))
 	}
 	attrString := strings.Join(attrStrings, " ")
 	if len(t.children) > 0 {
@@ -81,7 +81,7 @@ func compile(in bbTag, expr *htmlTag) *htmlTag {
 }
 
 func escapeQuotes(raw string) string {
-	return strings.Replace(raw, `"`, `\"`, -1)
+	return strings.Replace(strings.Replace(raw, `"`, `\"`, -1), `\`, `\\`, -1)
 }
 
 func safeURL(raw string) string {
@@ -89,7 +89,7 @@ func safeURL(raw string) string {
 	if err != nil {
 		return ""
 	}
-	return u.String()
+	return strings.Replace(u.String(), `\`, "%5C", -1)
 }
 
 func sanitize(raw string) string {
