@@ -1,5 +1,5 @@
 define PARSER_HEADER
-// Copyright 2014 Frustra Sofware. All rights reserved.
+// Copyright 2014 Frustra. All rights reserved.
 // Use of this source code is governed by the MIT
 // license that can be found in the LICENSE file.
 
