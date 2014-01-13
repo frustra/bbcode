@@ -109,7 +109,7 @@ var yyTok3 = []int{
 
 /*	parser for yacc output	*/
 
-var yyDebug = 0
+var yyDebug = 1
 
 type yyLexer interface {
 	Lex(lval *yySymType) int

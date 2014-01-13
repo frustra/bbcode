@@ -38,7 +38,7 @@ var (
 
 func init() {
 	for _, tag := range tags {
-		r := regexp.MustCompile(`^\[/?[ \t]*` + tag + `[ \t]+|\]`)
+		r := regexp.MustCompile(`^\[/?[ \t]*` + tag + `[\]= \t]`)
 		tagRegexps = append(tagRegexps, r)
 	}
 }
@@ -93,11 +93,11 @@ func (l *lexer) Lex(lval *yySymType) int {
 			}
 		}
 	case ARG_VALUE_STATE:
-		switch {
-		case unicode.IsSpace(rune(c)):
+		for unicode.IsSpace(rune(c)) {
 			l.str = l.str[1:]
-			l.state = TAG_ARGS_STATE
-			return 0
+			c = l.str[0]
+		}
+		switch {
 		case c == '"' || c == '\'':
 			return 0 //l.LexQuotedString(c, lval)
 		}
@@ -118,7 +118,7 @@ func (l *lexer) Lex(lval *yySymType) int {
 				}
 			}
 		}
-		offset := 0
+		offset := 1
 		for offset < len(l.str) {
 			if l.str[offset] == '[' {
 				break
