@@ -10,14 +10,14 @@ package bbcode
 import __yyfmt__ "fmt"
 
 //line parser.y:6
-//line parser.y:11
+//line parser.y:9
 type yySymType struct {
-	yys     int
-	str     string
-	value   stringPair
-	arg     *argument
-	bbTag   bbTag
-	htmlTag *htmlTag
+	yys      int
+	str      string
+	value    stringPair
+	argument *argument
+	bbTag    bbTag
+	htmlTag  *htmlTag
 }
 
 const TEXT = 57346
@@ -33,7 +33,7 @@ const yyEofCode = 1
 const yyErrCode = 2
 const yyMaxDepth = 200
 
-//line parser.y:74
+//line parser.y:72
 
 //line yacctab:1
 var yyExca = []int{
@@ -331,56 +331,56 @@ yydefault:
 	switch yynt {
 
 	case 2:
-		//line parser.y:30
+		//line parser.y:28
 		{
 			writeExpression(yylex, yyS[yypt-0].htmlTag.string())
 		}
 	case 3:
-		//line parser.y:34
+		//line parser.y:32
 		{
 			yyVAL.htmlTag = compile(yyS[yypt-2].bbTag, yyS[yypt-1].htmlTag)
 		}
 	case 4:
-		//line parser.y:38
+		//line parser.y:36
 		{
 			yyVAL.htmlTag = newHtmlTag(yyS[yypt-0].str)
 		}
 	case 5:
-		//line parser.y:42
+		//line parser.y:40
 		{
 			yyVAL.bbTag.key = yyS[yypt-2].value.key
 			yyVAL.bbTag.value = yyS[yypt-2].value.value
-			if yyS[yypt-1].arg != nil {
-				yyVAL.bbTag.args = yyS[yypt-1].arg.expand()
+			if yyS[yypt-1].argument != nil {
+				yyVAL.bbTag.args = yyS[yypt-1].argument.expand()
 			}
 		}
 	case 6:
-		//line parser.y:52
+		//line parser.y:50
 		{
 			yyVAL.str = yyS[yypt-1].str
 		}
 	case 7:
-		//line parser.y:56
+		//line parser.y:54
 		{
 			yyVAL.value.key = yyS[yypt-0].str
 		}
 	case 8:
-		//line parser.y:58
+		//line parser.y:56
 		{
 			yyVAL.value.key = yyS[yypt-2].str
 			yyVAL.value.value = yyS[yypt-0].str
 		}
 	case 9:
-		//line parser.y:65
+		//line parser.y:63
 		{
-			yyVAL.arg = nil
+			yyVAL.argument = nil
 		}
 	case 10:
-		//line parser.y:67
+		//line parser.y:65
 		{
-			yyVAL.arg = &argument{}
-			yyVAL.arg.others = yyS[yypt-1].arg
-			yyVAL.arg.arg = yyS[yypt-0].value
+			yyVAL.argument = &argument{}
+			yyVAL.argument.others = yyS[yypt-1].argument
+			yyVAL.argument.arg = yyS[yypt-0].value
 		}
 	}
 	goto yystack /* stack new state and value */

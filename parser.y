@@ -6,12 +6,10 @@
 package bbcode
 %}
 
-// fields inside this union end up as the fields in a structure known
-// as ${PREFIX}SymType, of which a reference is passed to the lexer.
 %union{
 	str string
 	value stringPair
-	arg *argument
+	argument *argument
 	bbTag bbTag
 	htmlTag *htmlTag
 }
@@ -19,7 +17,7 @@ package bbcode
 %type <str> tag_end
 %type <value> arg
 %type <bbTag> tag_start
-%type <arg> args
+%type <argument> args
 %type <htmlTag> expr
 %token <str> TEXT ID
 

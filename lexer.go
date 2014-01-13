@@ -30,7 +30,7 @@ type lexer struct {
 }
 
 var (
-	tags       = []string{"url", "img"}
+	tags       = []string{"url", "img", "b", "i", "u", "s", "quote", "code"}
 	tagRegexps []*regexp.Regexp
 	idRegexp   = regexp.MustCompile(`^[A-Za-z0-9_]+`)
 	textRegexp = regexp.MustCompile(`^(.+?)[ \]]`)

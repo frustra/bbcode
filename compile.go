@@ -30,23 +30,18 @@ func (t *htmlTag) string() string {
 	if t.value != "" {
 		return sanitize(t.value)
 	}
-	attrStrings := make([]string, 0, len(t.attrs))
+	var attrString string
 	for key, value := range t.attrs {
-		attrStrings = append(attrStrings, fmt.Sprintf(`%s="%s"`, key, escapeQuotes(sanitize(value))))
+		attrString = fmt.Sprintf(`%s %s="%s"`, attrString, key, escapeQuotes(sanitize(value)))
 	}
-	attrString := strings.Join(attrStrings, " ")
 	if len(t.children) > 0 {
 		var childrenString string
-		for i, child := range t.children {
-			if i == 0 {
-				childrenString = child.string()
-			} else {
-				childrenString = fmt.Sprint(childrenString, " ", child.string())
-			}
+		for _, child := range t.children {
+			childrenString = fmt.Sprint(childrenString, child.string())
 		}
-		return fmt.Sprintf(`<%s %s>%s</%s>`, t.name, attrString, childrenString, t.name)
+		return fmt.Sprintf(`<%s%s>%s</%s>`, t.name, attrString, childrenString, t.name)
 	} else {
-		return fmt.Sprintf(`<%s %s/>`, t.name, attrString)
+		return fmt.Sprintf(`<%s%s/>`, t.name, attrString)
 	}
 }
 
@@ -59,8 +54,8 @@ func (t *htmlTag) appendChild(child *htmlTag) {
 func compile(in bbTag, expr *htmlTag) *htmlTag {
 	var out = newHtmlTag("")
 
-	switch in.key {
-	case "url":
+	switch {
+	case in.key == "url":
 		out.name = "a"
 		if in.value == "" {
 			out.attrs["href"] = safeURL(expr.value)
@@ -68,7 +63,7 @@ func compile(in bbTag, expr *htmlTag) *htmlTag {
 			out.attrs["href"] = safeURL(in.value)
 		}
 		out.appendChild(expr)
-	case "img":
+	case in.key == "img":
 		out.name = "img"
 		if in.value == "" {
 			out.attrs["src"] = safeURL(expr.value)
@@ -76,6 +71,9 @@ func compile(in bbTag, expr *htmlTag) *htmlTag {
 			out.attrs["src"] = safeURL(in.value)
 			out.attrs["alt"] = expr.value
 		}
+	case in.key == "i" || in.key == "b":
+		out.name = in.key
+		out.appendChild(expr)
 	}
 	return out
 }
