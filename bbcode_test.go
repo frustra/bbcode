@@ -17,8 +17,10 @@ var basicTests = map[string]string{
 
 	`[img = foo]bar[/img]`: `<img src="foo" alt="bar"/>`,
 
-	`[b]bold[/b]`:   `<b>bold</b>`,
+	`[B]bold[/b]`:   `<b>bold</b>`,
 	`[i]italic[/i]`: `<i>italic</i>`,
+	`[u]underline[/U]`:   `<u>underline</u>`,
+	`[s]strikethrough[/s]`: `<s>strikethrough</s>`,
 
 	`[not a tag][/not]`: `[not a tag][/not]`,
 }

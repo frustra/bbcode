@@ -71,7 +71,7 @@ func compile(in bbTag, expr *htmlTag) *htmlTag {
 			out.attrs["src"] = safeURL(in.value)
 			out.attrs["alt"] = expr.value
 		}
-	case in.key == "i" || in.key == "b":
+	case in.key == "i" || in.key == "b" || in.key == "s" || in.key == "u":
 		out.name = in.key
 		out.appendChild(expr)
 	}

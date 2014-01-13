@@ -38,7 +38,7 @@ var (
 
 func init() {
 	for _, tag := range tags {
-		r := regexp.MustCompile(`^\[/?[ \t]*` + tag + `[\]= \t]`)
+		r := regexp.MustCompile(`(?i)^\[/?[ \t]*` + tag + `[\]= \t]`)
 		tagRegexps = append(tagRegexps, r)
 	}
 }
@@ -61,7 +61,7 @@ func (l *lexer) Lex(lval *yySymType) int {
 			l.str = l.str[1:]
 			return int(c)
 		}
-		str := string(l.str)
+		str := strings.ToLower(string(l.str))
 		for _, tag := range tags {
 			if strings.HasPrefix(str, tag) {
 				lval.str = tag
