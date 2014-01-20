@@ -22,10 +22,12 @@ type yySymType struct {
 
 const TEXT = 57346
 const ID = 57347
+const NEWLINE = 57348
 
 var yyToknames = []string{
 	"TEXT",
 	"ID",
+	"NEWLINE",
 }
 var yyStatenames = []string{}
 
@@ -33,7 +35,7 @@ const yyEofCode = 1
 const yyErrCode = 2
 const yyMaxDepth = 200
 
-//line parser.y:72
+//line parser.y:74
 
 //line yacctab:1
 var yyExca = []int{
@@ -42,47 +44,48 @@ var yyExca = []int{
 	-2, 0,
 }
 
-const yyNprod = 11
+const yyNprod = 12
 const yyPrivate = 57344
 
 var yyTokenNames []string
 var yyStates []string
 
-const yyLast = 19
+const yyLast = 21
 
 var yyAct = []int{
 
-	7, 12, 8, 13, 14, 18, 4, 10, 5, 17,
-	8, 16, 15, 2, 1, 11, 3, 6, 9,
+	8, 13, 9, 14, 19, 15, 6, 11, 4, 6,
+	18, 5, 9, 16, 17, 2, 1, 12, 3, 7,
+	10,
 }
 var yyPact = []int{
 
-	-1000, 2, -1000, 2, -1000, 5, 1, -1000, -8, -1000,
-	-5, -3, 7, 4, -1000, -1000, -1000, -2, -1000,
+	-1000, 4, 3, 4, -1000, 7, -1000, 0, -1000, -9,
+	-1000, -6, -3, 10, 5, -1000, -1000, -1000, -4, -1000,
 }
 var yyPgo = []int{
 
-	0, 18, 0, 16, 15, 13, 14,
+	0, 20, 0, 18, 17, 15, 16,
 }
 var yyR1 = []int{
 
-	0, 6, 6, 5, 5, 3, 1, 2, 2, 4,
-	4,
+	0, 6, 6, 5, 5, 5, 3, 1, 2, 2,
+	4, 4,
 }
 var yyR2 = []int{
 
-	0, 0, 2, 3, 1, 4, 4, 1, 3, 0,
-	2,
+	0, 0, 2, 3, 2, 1, 4, 4, 1, 3,
+	0, 2,
 }
 var yyChk = []int{
 
-	-1000, -6, -5, -3, 4, 6, -5, -2, 5, -1,
-	6, -4, 9, 8, 7, -2, 4, 5, 7,
+	-1000, -6, -5, -3, 4, 7, 6, -5, -2, 5,
+	-1, 7, -4, 10, 9, 8, -2, 4, 5, 8,
 }
 var yyDef = []int{
 
-	1, -2, 2, 0, 4, 0, 0, 9, 7, 3,
-	0, 0, 0, 0, 5, 10, 8, 0, 6,
+	1, -2, 2, 0, 5, 0, 4, 0, 10, 8,
+	3, 0, 0, 0, 0, 6, 11, 9, 0, 7,
 }
 var yyTok1 = []int{
 
@@ -90,16 +93,16 @@ var yyTok1 = []int{
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-	3, 3, 3, 3, 3, 3, 3, 8, 3, 3,
+	3, 3, 3, 3, 3, 3, 3, 9, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-	3, 9, 3, 3, 3, 3, 3, 3, 3, 3,
+	3, 10, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-	3, 6, 3, 7,
+	3, 7, 3, 8,
 }
 var yyTok2 = []int{
 
-	2, 3, 4, 5,
+	2, 3, 4, 5, 6,
 }
 var yyTok3 = []int{
 	0,
@@ -343,10 +346,15 @@ yydefault:
 	case 4:
 		//line parser.y:36
 		{
-			yyVAL.htmlTag = newHtmlTag(yyS[yypt-0].str)
+			yyVAL.htmlTag = newline(yyS[yypt-1].htmlTag)
 		}
 	case 5:
-		//line parser.y:40
+		//line parser.y:38
+		{
+			yyVAL.htmlTag = newHtmlTag(yyS[yypt-0].str)
+		}
+	case 6:
+		//line parser.y:42
 		{
 			yyVAL.bbTag.key = yyS[yypt-2].value.key
 			yyVAL.bbTag.value = yyS[yypt-2].value.value
@@ -354,29 +362,29 @@ yydefault:
 				yyVAL.bbTag.args = yyS[yypt-1].argument.expand()
 			}
 		}
-	case 6:
-		//line parser.y:50
+	case 7:
+		//line parser.y:52
 		{
 			yyVAL.str = yyS[yypt-1].str
-		}
-	case 7:
-		//line parser.y:54
-		{
-			yyVAL.value.key = yyS[yypt-0].str
 		}
 	case 8:
 		//line parser.y:56
 		{
+			yyVAL.value.key = yyS[yypt-0].str
+		}
+	case 9:
+		//line parser.y:58
+		{
 			yyVAL.value.key = yyS[yypt-2].str
 			yyVAL.value.value = yyS[yypt-0].str
 		}
-	case 9:
-		//line parser.y:63
+	case 10:
+		//line parser.y:65
 		{
 			yyVAL.argument = nil
 		}
-	case 10:
-		//line parser.y:65
+	case 11:
+		//line parser.y:67
 		{
 			yyVAL.argument = &argument{}
 			yyVAL.argument.others = yyS[yypt-1].argument

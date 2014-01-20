@@ -19,7 +19,7 @@ package bbcode
 %type <bbTag> tag_start
 %type <argument> args
 %type <htmlTag> expr
-%token <str> TEXT ID
+%token <str> TEXT ID NEWLINE
 
 %%
 
@@ -32,6 +32,8 @@ expr: tag_start expr tag_end
 	{
 		$$ = compile($1, $2)
 	}
+	| expr NEWLINE
+	{ $$ = newline($1) }
 	| TEXT
 	{ $$ = newHtmlTag($1) }
 	;

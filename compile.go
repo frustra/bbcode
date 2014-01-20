@@ -27,8 +27,9 @@ func newHtmlTag(value string) *htmlTag {
 }
 
 func (t *htmlTag) string() string {
+	var value string
 	if t.value != "" {
-		return sanitize(t.value)
+		value = sanitize(t.value)
 	}
 	var attrString string
 	for key, value := range t.attrs {
@@ -39,9 +40,15 @@ func (t *htmlTag) string() string {
 		for _, child := range t.children {
 			childrenString = fmt.Sprint(childrenString, child.string())
 		}
-		return fmt.Sprintf(`<%s%s>%s</%s>`, t.name, attrString, childrenString, t.name)
+		if t.name != "" {
+			return fmt.Sprintf(`%s<%s%s>%s</%s>`, value, t.name, attrString, childrenString, t.name)
+		} else {
+			return fmt.Sprint(value, childrenString)
+		}
+	} else if t.name != "" {
+		return fmt.Sprintf(`%s<%s%s>`, value, t.name, attrString)
 	} else {
-		return fmt.Sprintf(`<%s%s/>`, t.name, attrString)
+		return value
 	}
 }
 
@@ -76,6 +83,13 @@ func compile(in bbTag, expr *htmlTag) *htmlTag {
 		out.appendChild(expr)
 	}
 	return out
+}
+
+func newline(expr *htmlTag) *htmlTag {
+	var out = newHtmlTag("")
+	out.name = "br"
+	expr.appendChild(out)
+	return expr
 }
 
 func escapeQuotes(raw string) string {

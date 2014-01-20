@@ -109,6 +109,10 @@ func (l *lexer) Lex(lval *yySymType) int {
 			return TEXT
 		}
 	case INIT_STATE:
+		if c == '\n' {
+			l.str = l.str[1:]
+			return NEWLINE
+		}
 		if c == '[' {
 			for _, r := range tagRegexps {
 				if r.Match(l.str) {
@@ -120,7 +124,8 @@ func (l *lexer) Lex(lval *yySymType) int {
 		}
 		offset := 1
 		for offset < len(l.str) {
-			if l.str[offset] == '[' {
+			curr := l.str[offset]
+			if curr == '[' || curr == '\n' {
 				break
 			}
 			offset++
