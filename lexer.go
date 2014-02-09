@@ -23,10 +23,11 @@ const (
 
 // Abuse of the generated types to keep parser state in the lexer
 type lexer struct {
-	str    []byte
-	state  lexerState
-	buffer bytes.Buffer
-	err    error
+	str        []byte
+	state      lexerState
+	tagsOpened int
+	buffer     bytes.Buffer
+	err        error
 }
 
 var (
@@ -45,25 +46,23 @@ func init() {
 
 func newLexer(str string) *lexer {
 	return &lexer{
-		str: []byte(str + "\n"),
+		str: []byte(str),
 	}
 }
 
 func (l *lexer) Lex(lval *yySymType) int {
-	if len(l.str) == 1 {
-		l.str = l.str[1:]
-		return EOF
-	} else if len(l.str) <= 0 {
-		return 0
+	if len(l.str) <= 0 {
+		if l.tagsOpened > 0 {
+			l.tagsOpened--
+			return MISSING_CLOSING
+		} else {
+			return 0
+		}
 	}
 	var c byte = l.str[0]
 
 	switch l.state {
 	case TAG_START_STATE:
-		if c == '/' {
-			l.str = l.str[1:]
-			return int(c)
-		}
 		str := strings.ToLower(string(l.str))
 		for _, tag := range tags {
 			if strings.HasPrefix(str, tag) {
@@ -121,7 +120,18 @@ func (l *lexer) Lex(lval *yySymType) int {
 				if r.Match(l.str) {
 					l.str = l.str[1:]
 					l.state = TAG_START_STATE
-					return int(c)
+					if l.str[0] == '/' {
+						l.str = l.str[1:]
+						if l.tagsOpened <= 0 {
+							return MISSING_OPENING
+						} else {
+							l.tagsOpened--
+							return CLOSING_TAG_OPENING
+						}
+					} else {
+						l.tagsOpened++
+						return int(c)
+					}
 				}
 			}
 		}

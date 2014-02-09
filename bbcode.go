@@ -27,6 +27,20 @@ type bbTag struct {
 	args  map[string]string
 }
 
+func (t *bbTag) string() string {
+	str := t.key
+	if len(t.value) > 0 {
+		str += "=" + t.value
+	}
+	for k, v := range t.args {
+		str += " " + k
+		if len(v) > 0 {
+			str += "=" + v
+		}
+	}
+	return "[" + str + "]"
+}
+
 func writeExpression(lex yyLexer, expr string) {
 	lex.(*lexer).buffer.WriteString(expr)
 }

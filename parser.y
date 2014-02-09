@@ -4,6 +4,8 @@
 
 %{
 package bbcode
+
+import "strings"
 %}
 
 %union{
@@ -18,24 +20,42 @@ package bbcode
 %type <value> arg
 %type <bbTag> tag_start
 %type <argument> args
+%type <htmlTag> list
 %type <htmlTag> expr
-%token <str> TEXT ID NEWLINE EOF
+%token <str> TEXT ID NEWLINE MISSING_CLOSING CLOSING_TAG_OPENING MISSING_OPENING
 
 %%
 
-list:
-	| list expr
-	{ writeExpression(yylex, $2.string()) }
-	| list tag_end
-	{ writeExpression(yylex, "[/" + $2 + "]") }
-	| list EOF
-	{ writeExpression(yylex, "") }
+full: list
+	{ writeExpression(yylex, $1.string()) }
 	;
 
-expr: tag_start expr tag_end
-	{ $$ = compile($1, $2) }
-	| expr NEWLINE
-	{ $$ = newline($1) }
+list:
+	{ $$ = nil }
+	| expr list
+	{
+		if $2 == nil {
+			$$ = $1
+		} else {
+			$$ = newHtmlTag("").appendChild($1).appendChild($2)
+		}
+	}
+	;
+
+expr: tag_start list tag_end
+	{
+		if strings.EqualFold($1.key, $3) {
+			$$ = compile($1, $2)
+		} else {
+			$$ = newHtmlTag($1.string()).appendChild($2).appendChild(newHtmlTag("[/" + $3 + "]"))
+		}
+	}
+	| tag_start list MISSING_CLOSING
+	{ $$ = newHtmlTag($1.string()).appendChild($2) }
+	| MISSING_OPENING ID ']'
+	{ $$ = newHtmlTag("[/" + $2 + "]") }
+	| NEWLINE
+	{ $$ = newline() }
 	| TEXT
 	{ $$ = newHtmlTag($1) }
 	;
@@ -50,8 +70,8 @@ tag_start: '[' arg args ']'
 	}
 	;
 
-tag_end: '[' '/' ID ']'
-	{ $$ = $3 }
+tag_end: CLOSING_TAG_OPENING ID ']'
+	{ $$ = $2 }
 	;
 
 arg: ID

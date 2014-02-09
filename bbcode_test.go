@@ -22,8 +22,12 @@ var basicTests = map[string]string{
 	`[u]underline[/U]`:     `<u>underline</u>`,
 	`[s]strikethrough[/s]`: `<s>strikethrough</s>`,
 
+	`[u][b]something[/b] then [b]something else[/b][/u]`: `<u><b>something</b> then <b>something else</b></u>`,
+
 	"test\nnewline\nnewline": `test<br>newline<br>newline`,
 	"test\n\nnewline":        `test<br><br>newline`,
+	"[b]test[/b]\n\nnewline": `<b>test</b><br><br>newline`,
+	"[b]test\nnewline[/b]":   `<b>test<br>newline</b>`,
 
 	`[not a tag][/not]`: `[not a tag][/not]`,
 }
@@ -44,7 +48,7 @@ var sanitizationTests = map[string]string{
 	`[url]<script>[/url]`: `<a href="%3Cscript%3E">&lt;script&gt;</a>`,
 
 	`[url=<script>]<script>[/url]`: `<a href="%3Cscript%3E">&lt;script&gt;</a>`,
-	`[img=<script>]<script>[/url]`: `<img src="%3Cscript%3E" alt="&lt;script&gt;">`,
+	`[img=<script>]<script>[/img]`: `<img src="%3Cscript%3E" alt="&lt;script&gt;">`,
 
 	`[url=http://a.b/z?\]link[/url]`: `<a href="http://a.b/z?%5C">link</a>`,
 }
@@ -74,17 +78,24 @@ func TestFull(t *testing.T) {
 	}
 }
 
-var brokenTestInput = `the quick brown [b]fox[/b]
-[url=http://example[img]http://example.png[/img][/url]`
-
-var brokenTestOutput = `the quick brown <b>fox</b><br><a href="http://example[img">http://example.png</a>[/url]`
+var brokenTests = map[string]string{
+	"[b]":        `[b]`,
+	"[b]\n":      `[b]<br>`,
+	"[b]hello":   `[b]hello`,
+	"[b]hello\n": `[b]hello<br>`,
+	"the quick brown [b][i]fox[/b][/i]\n[i]\n[url=http://example][img]http://example.png[/img][/url][b][url=http://example[img]http://example.png[/img][/url][b]": `the quick brown [b][i]fox[/b][/i]<br>[i]<br><a href="http://example"><img src="http://example.png"></a>[b][url=http://example[img]http://example.png[/img][/url][b]`,
+	"the quick brown[/b][b]hello[/b]": `the quick brown[/b]<b>hello</b>`,
+	"the quick brown[/b]":             `the quick brown[/b]`,
+}
 
 func TestBroken(t *testing.T) {
-	result, err := Compile(brokenTestInput)
-	if err != nil {
-		t.Errorf("Unexpected error %v while compiling %s\n", err, brokenTestInput)
-	} else if result != brokenTestOutput {
-		t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", brokenTestInput, brokenTestOutput, result)
+	for in, out := range brokenTests {
+		result, err := Compile(in)
+		if err != nil {
+			t.Errorf("Unexpected error %v while compiling %s\n", err, in)
+		} else if result != out {
+			t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", in, out, result)
+		}
 	}
 }
 

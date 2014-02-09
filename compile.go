@@ -53,6 +53,9 @@ func (t *htmlTag) string() string {
 }
 
 func (t *htmlTag) appendChild(child *htmlTag) *htmlTag {
+	if child == nil {
+		return t
+	}
 	t.children = append(t.children, child)
 	return t
 }
@@ -86,11 +89,10 @@ func compile(in bbTag, expr *htmlTag) *htmlTag {
 	return out
 }
 
-func newline(expr *htmlTag) *htmlTag {
-	var wrap = newHtmlTag("")
+func newline() *htmlTag {
 	var out = newHtmlTag("")
 	out.name = "br"
-	return wrap.appendChild(expr).appendChild(out)
+	return out
 }
 
 func escapeQuotes(raw string) string {
