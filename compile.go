@@ -52,8 +52,9 @@ func (t *htmlTag) string() string {
 	}
 }
 
-func (t *htmlTag) appendChild(child *htmlTag) {
+func (t *htmlTag) appendChild(child *htmlTag) *htmlTag {
 	t.children = append(t.children, child)
+	return t
 }
 
 // compile transforms a tag and subexpression into an HTML string.
@@ -86,10 +87,10 @@ func compile(in bbTag, expr *htmlTag) *htmlTag {
 }
 
 func newline(expr *htmlTag) *htmlTag {
+	var wrap = newHtmlTag("")
 	var out = newHtmlTag("")
 	out.name = "br"
-	expr.appendChild(out)
-	return expr
+	return wrap.appendChild(expr).appendChild(out)
 }
 
 func escapeQuotes(raw string) string {

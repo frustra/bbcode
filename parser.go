@@ -23,11 +23,13 @@ type yySymType struct {
 const TEXT = 57346
 const ID = 57347
 const NEWLINE = 57348
+const EOF = 57349
 
 var yyToknames = []string{
 	"TEXT",
 	"ID",
 	"NEWLINE",
+	"EOF",
 }
 var yyStatenames = []string{}
 
@@ -35,7 +37,7 @@ const yyEofCode = 1
 const yyErrCode = 2
 const yyMaxDepth = 200
 
-//line parser.y:74
+//line parser.y:76
 
 //line yacctab:1
 var yyExca = []int{
@@ -44,48 +46,51 @@ var yyExca = []int{
 	-2, 0,
 }
 
-const yyNprod = 12
+const yyNprod = 14
 const yyPrivate = 57344
 
 var yyTokenNames []string
 var yyStates []string
 
-const yyLast = 21
+const yyLast = 27
 
 var yyAct = []int{
 
-	8, 13, 9, 14, 19, 15, 6, 11, 4, 6,
-	18, 5, 9, 16, 17, 2, 1, 12, 3, 7,
-	10,
+	11, 18, 13, 12, 13, 3, 6, 12, 19, 4,
+	7, 8, 21, 15, 6, 14, 2, 20, 10, 8,
+	17, 13, 9, 22, 1, 16, 5,
 }
 var yyPact = []int{
 
-	-1000, 4, 3, 4, -1000, 7, -1000, 0, -1000, -9,
-	-1000, -6, -3, 10, 5, -1000, -1000, -1000, -4, -1000,
+	-1000, 2, 13, -1000, -1000, 10, -1000, -3, -1000, 5,
+	16, -1000, 15, -10, -1000, -7, -1, 3, 19, -1000,
+	-1000, -1000, -1000,
 }
 var yyPgo = []int{
 
-	0, 20, 0, 18, 17, 15, 16,
+	0, 5, 0, 26, 25, 16, 24,
 }
 var yyR1 = []int{
 
-	0, 6, 6, 5, 5, 5, 3, 1, 2, 2,
-	4, 4,
+	0, 6, 6, 6, 6, 5, 5, 5, 3, 1,
+	2, 2, 4, 4,
 }
 var yyR2 = []int{
 
-	0, 0, 2, 3, 2, 1, 4, 4, 1, 3,
-	0, 2,
+	0, 0, 2, 2, 2, 3, 2, 1, 4, 4,
+	1, 3, 0, 2,
 }
 var yyChk = []int{
 
-	-1000, -6, -5, -3, 4, 7, 6, -5, -2, 5,
-	-1, 7, -4, 10, 9, 8, -2, 4, 5, 8,
+	-1000, -6, -5, -1, 7, -3, 4, 8, 6, -5,
+	8, -2, 10, 5, -1, 8, -4, 5, 11, 9,
+	-2, 9, 4,
 }
 var yyDef = []int{
 
-	1, -2, 2, 0, 5, 0, 4, 0, 10, 8,
-	3, 0, 0, 0, 0, 6, 11, 9, 0, 7,
+	1, -2, 2, 3, 4, 0, 7, 0, 6, 0,
+	0, 12, 0, 10, 5, 0, 0, 0, 0, 8,
+	13, 9, 11,
 }
 var yyTok1 = []int{
 
@@ -93,16 +98,16 @@ var yyTok1 = []int{
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-	3, 3, 3, 3, 3, 3, 3, 9, 3, 3,
+	3, 3, 3, 3, 3, 3, 3, 10, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-	3, 10, 3, 3, 3, 3, 3, 3, 3, 3,
+	3, 11, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-	3, 7, 3, 8,
+	3, 8, 3, 9,
 }
 var yyTok2 = []int{
 
-	2, 3, 4, 5, 6,
+	2, 3, 4, 5, 6, 7,
 }
 var yyTok3 = []int{
 	0,
@@ -339,22 +344,32 @@ yydefault:
 			writeExpression(yylex, yyS[yypt-0].htmlTag.string())
 		}
 	case 3:
+		//line parser.y:30
+		{
+			writeExpression(yylex, "[/"+yyS[yypt-0].str+"]")
+		}
+	case 4:
 		//line parser.y:32
+		{
+			writeExpression(yylex, "")
+		}
+	case 5:
+		//line parser.y:36
 		{
 			yyVAL.htmlTag = compile(yyS[yypt-2].bbTag, yyS[yypt-1].htmlTag)
 		}
-	case 4:
-		//line parser.y:36
+	case 6:
+		//line parser.y:38
 		{
 			yyVAL.htmlTag = newline(yyS[yypt-1].htmlTag)
 		}
-	case 5:
-		//line parser.y:38
+	case 7:
+		//line parser.y:40
 		{
 			yyVAL.htmlTag = newHtmlTag(yyS[yypt-0].str)
 		}
-	case 6:
-		//line parser.y:42
+	case 8:
+		//line parser.y:44
 		{
 			yyVAL.bbTag.key = yyS[yypt-2].value.key
 			yyVAL.bbTag.value = yyS[yypt-2].value.value
@@ -362,29 +377,29 @@ yydefault:
 				yyVAL.bbTag.args = yyS[yypt-1].argument.expand()
 			}
 		}
-	case 7:
-		//line parser.y:52
+	case 9:
+		//line parser.y:54
 		{
 			yyVAL.str = yyS[yypt-1].str
 		}
-	case 8:
-		//line parser.y:56
+	case 10:
+		//line parser.y:58
 		{
 			yyVAL.value.key = yyS[yypt-0].str
 		}
-	case 9:
-		//line parser.y:58
+	case 11:
+		//line parser.y:60
 		{
 			yyVAL.value.key = yyS[yypt-2].str
 			yyVAL.value.value = yyS[yypt-0].str
 		}
-	case 10:
-		//line parser.y:65
+	case 12:
+		//line parser.y:67
 		{
 			yyVAL.argument = nil
 		}
-	case 11:
-		//line parser.y:67
+	case 13:
+		//line parser.y:69
 		{
 			yyVAL.argument = &argument{}
 			yyVAL.argument.others = yyS[yypt-1].argument

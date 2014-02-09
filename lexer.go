@@ -45,12 +45,15 @@ func init() {
 
 func newLexer(str string) *lexer {
 	return &lexer{
-		str: []byte(str),
+		str: []byte(str + "\n"),
 	}
 }
 
 func (l *lexer) Lex(lval *yySymType) int {
-	if len(l.str) <= 0 {
+	if len(l.str) == 1 {
+		l.str = l.str[1:]
+		return EOF
+	} else if len(l.str) <= 0 {
 		return 0
 	}
 	var c byte = l.str[0]

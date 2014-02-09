@@ -19,19 +19,21 @@ package bbcode
 %type <bbTag> tag_start
 %type <argument> args
 %type <htmlTag> expr
-%token <str> TEXT ID NEWLINE
+%token <str> TEXT ID NEWLINE EOF
 
 %%
 
 list:
 	| list expr
 	{ writeExpression(yylex, $2.string()) }
+	| list tag_end
+	{ writeExpression(yylex, "[/" + $2 + "]") }
+	| list EOF
+	{ writeExpression(yylex, "") }
 	;
 
 expr: tag_start expr tag_end
-	{
-		$$ = compile($1, $2)
-	}
+	{ $$ = compile($1, $2) }
 	| expr NEWLINE
 	{ $$ = newline($1) }
 	| TEXT

@@ -74,6 +74,20 @@ func TestFull(t *testing.T) {
 	}
 }
 
+var brokenTestInput = `the quick brown [b]fox[/b]
+[url=http://example[img]http://example.png[/img][/url]`
+
+var brokenTestOutput = `the quick brown <b>fox</b><br><a href="http://example[img">http://example.png</a>[/url]`
+
+func TestBroken(t *testing.T) {
+	result, err := Compile(brokenTestInput)
+	if err != nil {
+		t.Errorf("Unexpected error %v while compiling %s\n", err, brokenTestInput)
+	} else if result != brokenTestOutput {
+		t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", brokenTestInput, brokenTestOutput, result)
+	}
+}
+
 var urlTests = map[string]string{
 	"http://example.com/path?query=value#fragment": "http://example.com/path?query=value#fragment",
 	"<script>http://example.com":                   "%3Cscript%3Ehttp://example.com",
