@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"html"
 	"net/url"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -61,13 +63,19 @@ func (t *htmlTag) appendChild(child *htmlTag) *htmlTag {
 	return t
 }
 
+var tagMap = map[string]string{
+	"quote":  "blockquote",
+	"strike": "s",
+}
+var youtubeRegex = regexp.MustCompile(`(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?([a-zA-Z0-9]+)`)
+
 // compile transforms a tag and subexpression into an HTML string.
 // It is only used by the generated parser code.
 func compile(in bbTag, expr *htmlTag) *htmlTag {
 	var out = newHtmlTag("")
 
-	switch {
-	case in.key == "url":
+	switch in.key {
+	case "url":
 		out.name = "a"
 		if in.value == "" {
 			if expr != nil {
@@ -79,7 +87,7 @@ func compile(in bbTag, expr *htmlTag) *htmlTag {
 			out.attrs["href"] = safeURL(in.value)
 		}
 		out.appendChild(expr)
-	case in.key == "img":
+	case "img":
 		out.name = "img"
 		if in.value == "" {
 			if expr != nil {
@@ -93,7 +101,66 @@ func compile(in bbTag, expr *htmlTag) *htmlTag {
 				out.attrs["alt"] = expr.value
 			}
 		}
-	case in.key == "i" || in.key == "b" || in.key == "s" || in.key == "u":
+	case "media":
+		if expr == nil {
+			out.value = "Embedded video"
+		} else {
+			matches := youtubeRegex.FindStringSubmatch(expr.value)
+			if matches == nil {
+				out.value = "Embedded video"
+			} else {
+				out.name = "object"
+				out.attrs["width"] = "620"
+				out.attrs["height"] = "349"
+
+				params := map[string]string{
+					"movie":             fmt.Sprintf("//www.youtube.com/v/%s?version=3", matches[1]),
+					"wmode":             "transparent",
+					"allowFullScreen":   "true",
+					"allowscriptaccess": "always",
+				}
+
+				for name, value := range params {
+					param := newHtmlTag("")
+					param.name = "param"
+					param.attrs["name"] = name
+					param.attrs["value"] = value
+					out.appendChild(param)
+				}
+				embed := newHtmlTag("")
+				embed.name = "embed"
+				embed.attrs["type"] = "application/x-shockwave-flash"
+				embed.attrs["width"] = "620"
+				embed.attrs["height"] = "349"
+				for name, value := range params {
+					if name == "movie" {
+						name = "src"
+					}
+					embed.attrs[name] = value
+				}
+				out.appendChild(embed)
+			}
+		}
+	case "center":
+		out.name = "div"
+		out.attrs["style"] = "text-align: center;"
+		out.appendChild(expr)
+	case "color":
+		return expr
+	case "size":
+		out.name = "span"
+		if size, err := strconv.Atoi(in.value); err == nil {
+			out.attrs["style"] = fmt.Sprintf("font-size: %dpx;", size*4)
+		}
+		out.appendChild(expr)
+	case "spoiler":
+		out.name = "div"
+		out.attrs["class"] = "spoiler-tag"
+		out.appendChild(expr)
+	case "quote", "strike":
+		out.name = tagMap[in.key]
+		out.appendChild(expr)
+	case "i", "b", "u", "code":
 		out.name = in.key
 		out.appendChild(expr)
 	}

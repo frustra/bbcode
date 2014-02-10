@@ -17,6 +17,7 @@ type lexerState int
 const (
 	INIT_STATE lexerState = iota
 	TAG_START_STATE
+	TAG_END_STATE
 	TAG_ARGS_STATE
 	ARG_VALUE_STATE
 )
@@ -24,6 +25,7 @@ const (
 // Abuse of the generated types to keep parser state in the lexer
 type lexer struct {
 	str        []byte
+	lastTag    string
 	state      lexerState
 	tagsOpened int
 	buffer     bytes.Buffer
@@ -31,9 +33,10 @@ type lexer struct {
 }
 
 var (
-	tags            = []string{"url", "img", "b", "i", "u", "s", "quote", "code"}
+	tags            = []string{"url", "img", "b", "i", "u", "strike", "center", "color", "size", "quote", "code", "spoiler", "media"}
 	tagOpenRegexps  []*regexp.Regexp
 	tagCloseRegexps []*regexp.Regexp
+	codeCloseRegex  *regexp.Regexp
 )
 
 func init() {
@@ -41,7 +44,11 @@ func init() {
 		r := regexp.MustCompile(`(?i)^\[[ \t]*` + tag + `[\]= \t]`)
 		tagOpenRegexps = append(tagOpenRegexps, r)
 		r = regexp.MustCompile(`(?i)^\[/[ \t]*` + tag + `[ \t]*\]`)
-		tagCloseRegexps = append(tagCloseRegexps, r)
+		if tag == "code" {
+			codeCloseRegex = r
+		} else {
+			tagCloseRegexps = append(tagCloseRegexps, r)
+		}
 	}
 }
 
@@ -72,6 +79,22 @@ func (l *lexer) Lex(lval *yySymType) int {
 		for _, tag := range tags {
 			if strings.HasPrefix(str, tag) {
 				lval.str = tag
+				l.lastTag = tag
+				l.str = l.str[len(tag):]
+				l.state = TAG_ARGS_STATE
+				return ID
+			}
+		}
+	case TAG_END_STATE:
+		for unicode.IsSpace(rune(c)) {
+			l.str = l.str[1:]
+			c = l.str[0]
+		}
+		str := strings.ToLower(string(l.str))
+		for _, tag := range tags {
+			if strings.HasPrefix(str, tag) {
+				lval.str = tag
+				l.lastTag = ""
 				l.str = l.str[len(tag):]
 				l.state = TAG_ARGS_STATE
 				return ID
@@ -131,11 +154,11 @@ func (l *lexer) Lex(lval *yySymType) int {
 			return NEWLINE
 		}
 		if c == '[' {
-			if l.str[1] == '/' {
-				for _, r := range tagCloseRegexps {
-					if r.Match(l.str) {
+			if len(l.str) > 1 && l.str[1] == '/' {
+				if l.lastTag == "code" {
+					if codeCloseRegex.Match(l.str) {
 						l.str = l.str[2:]
-						l.state = TAG_START_STATE
+						l.state = TAG_END_STATE
 						if l.tagsOpened <= 0 {
 							return MISSING_OPENING
 						} else {
@@ -143,8 +166,21 @@ func (l *lexer) Lex(lval *yySymType) int {
 							return CLOSING_TAG_OPENING
 						}
 					}
+				} else {
+					for _, r := range tagCloseRegexps {
+						if r.Match(l.str) {
+							l.str = l.str[2:]
+							l.state = TAG_END_STATE
+							if l.tagsOpened <= 0 {
+								return MISSING_OPENING
+							} else {
+								l.tagsOpened--
+								return CLOSING_TAG_OPENING
+							}
+						}
+					}
 				}
-			} else {
+			} else if l.lastTag != "code" {
 				for _, r := range tagOpenRegexps {
 					if r.Match(l.str) {
 						l.str = l.str[1:]
