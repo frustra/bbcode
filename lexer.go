@@ -31,16 +31,17 @@ type lexer struct {
 }
 
 var (
-	tags       = []string{"url", "img", "b", "i", "u", "s", "quote", "code"}
-	tagRegexps []*regexp.Regexp
-	idRegexp   = regexp.MustCompile(`^[A-Za-z0-9_]+`)
-	textRegexp = regexp.MustCompile(`^(.+?)[ \]]`)
+	tags            = []string{"url", "img", "b", "i", "u", "s", "quote", "code"}
+	tagOpenRegexps  []*regexp.Regexp
+	tagCloseRegexps []*regexp.Regexp
 )
 
 func init() {
 	for _, tag := range tags {
-		r := regexp.MustCompile(`(?i)^\[/?[ \t]*` + tag + `[\]= \t]`)
-		tagRegexps = append(tagRegexps, r)
+		r := regexp.MustCompile(`(?i)^\[[ \t]*` + tag + `[\]= \t]`)
+		tagOpenRegexps = append(tagOpenRegexps, r)
+		r = regexp.MustCompile(`(?i)^\[/[ \t]*` + tag + `[ \t]*\]`)
+		tagCloseRegexps = append(tagCloseRegexps, r)
 	}
 }
 
@@ -63,6 +64,10 @@ func (l *lexer) Lex(lval *yySymType) int {
 
 	switch l.state {
 	case TAG_START_STATE:
+		for unicode.IsSpace(rune(c)) {
+			l.str = l.str[1:]
+			c = l.str[0]
+		}
 		str := strings.ToLower(string(l.str))
 		for _, tag := range tags {
 			if strings.HasPrefix(str, tag) {
@@ -87,12 +92,17 @@ func (l *lexer) Lex(lval *yySymType) int {
 			l.state = ARG_VALUE_STATE
 			return int(c)
 		default:
-			match := idRegexp.Find(l.str)
-			if match != nil {
-				lval.str = string(match)
-				l.str = l.str[len(match):]
-				return ID
+			offset := 1
+			for offset < len(l.str) {
+				curr := l.str[offset]
+				if curr == ']' || curr == '=' {
+					break
+				}
+				offset++
 			}
+			lval.str = string(l.str[0:offset])
+			l.str = l.str[offset:]
+			return ID
 		}
 	case ARG_VALUE_STATE:
 		for unicode.IsSpace(rune(c)) {
@@ -103,32 +113,42 @@ func (l *lexer) Lex(lval *yySymType) int {
 		case c == '"' || c == '\'':
 			return 0 //l.LexQuotedString(c, lval)
 		}
-		matches := textRegexp.FindSubmatch(l.str)
-		if matches != nil && len(matches) > 1 && len(matches[1]) > 0 {
-			lval.str = string(matches[1])
-			l.str = l.str[len(matches[1]):]
-			l.state = TAG_ARGS_STATE
-			return TEXT
+		offset := 1
+		for offset < len(l.str) {
+			curr := l.str[offset]
+			if curr == ']' || curr == ' ' || curr == '\t' {
+				break
+			}
+			offset++
 		}
+		lval.str = string(l.str[0:offset])
+		l.str = l.str[offset:]
+		l.state = TAG_ARGS_STATE
+		return TEXT
 	case INIT_STATE:
 		if c == '\n' {
 			l.str = l.str[1:]
 			return NEWLINE
 		}
 		if c == '[' {
-			for _, r := range tagRegexps {
-				if r.Match(l.str) {
-					l.str = l.str[1:]
-					l.state = TAG_START_STATE
-					if l.str[0] == '/' {
-						l.str = l.str[1:]
+			if l.str[1] == '/' {
+				for _, r := range tagCloseRegexps {
+					if r.Match(l.str) {
+						l.str = l.str[2:]
+						l.state = TAG_START_STATE
 						if l.tagsOpened <= 0 {
 							return MISSING_OPENING
 						} else {
 							l.tagsOpened--
 							return CLOSING_TAG_OPENING
 						}
-					} else {
+					}
+				}
+			} else {
+				for _, r := range tagOpenRegexps {
+					if r.Match(l.str) {
+						l.str = l.str[1:]
+						l.state = TAG_START_STATE
 						l.tagsOpened++
 						return int(c)
 					}

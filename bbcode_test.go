@@ -4,16 +4,16 @@
 
 package bbcode
 
-import (
-	"testing"
-)
+import "testing"
 
 var basicTests = map[string]string{
 	`[url]http://example.com[/url]`: `<a href="http://example.com">http://example.com</a>`,
 	`[img]http://example.com[/img]`: `<img src="http://example.com">`,
+	`[img][/img]`:                   `<img src="">`,
 
 	`[url=http://example.com]example[/url]`:  `<a href="http://example.com">example</a>`,
 	`[img=http://example.com]alt text[/img]`: `<img src="http://example.com" alt="alt text">`,
+	`[img=http://example.com][/img]`:         `<img src="http://example.com">`,
 
 	`[img = foo]bar[/img]`: `<img src="foo" alt="bar">`,
 
@@ -23,6 +23,7 @@ var basicTests = map[string]string{
 	`[s]strikethrough[/s]`: `<s>strikethrough</s>`,
 
 	`[u][b]something[/b] then [b]something else[/b][/u]`: `<u><b>something</b> then <b>something else</b></u>`,
+	`blank[b][/b]`:                                       `blank<b></b>`,
 
 	"test\nnewline\nnewline": `test<br>newline<br>newline`,
 	"test\n\nnewline":        `test<br><br>newline`,
@@ -83,9 +84,12 @@ var brokenTests = map[string]string{
 	"[b]\n":      `[b]<br>`,
 	"[b]hello":   `[b]hello`,
 	"[b]hello\n": `[b]hello<br>`,
-	"the quick brown [b][i]fox[/b][/i]\n[i]\n[url=http://example][img]http://example.png[/img][/url][b][url=http://example[img]http://example.png[/img][/url][b]": `the quick brown [b][i]fox[/b][/i]<br>[i]<br><a href="http://example"><img src="http://example.png"></a>[b][url=http://example[img]http://example.png[/img][/url][b]`,
-	"the quick brown[/b][b]hello[/b]": `the quick brown[/b]<b>hello</b>`,
-	"the quick brown[/b]":             `the quick brown[/b]`,
+	"the quick brown [b][i]fox[/b][/i]\n[i]\n[b]hi[/b]][b][url=http://example[img]http://example.png[/img][/url][b]": `the quick brown [b][i]fox[/b][/i]<br>[i]<br><b>hi</b>][b][url=http://example[img]http://example.png[/img][/url][b]`,
+	"the quick brown[/b][b]hello[/b]":                                                                                `the quick brown[/b]<b>hello</b>`,
+	"the quick brown[/b]":                                                                                            `the quick brown[/b]`,
+	"[ b][	i]the quick brown[/i][/b=hello]": `[b]<i>the quick brown</i>[/b=hello]`,
+	"[b [herp@#$%]]the quick brown[/b]": `<b>]the quick brown</b>`,
+	"[b=hello a=hi	q]the quick brown[/b]": `<b>the quick brown</b>`,
 }
 
 func TestBroken(t *testing.T) {

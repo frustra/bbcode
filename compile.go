@@ -54,9 +54,10 @@ func (t *htmlTag) string() string {
 
 func (t *htmlTag) appendChild(child *htmlTag) *htmlTag {
 	if child == nil {
-		return t
+		t.children = append(t.children, newHtmlTag(""))
+	} else {
+		t.children = append(t.children, child)
 	}
-	t.children = append(t.children, child)
 	return t
 }
 
@@ -69,7 +70,11 @@ func compile(in bbTag, expr *htmlTag) *htmlTag {
 	case in.key == "url":
 		out.name = "a"
 		if in.value == "" {
-			out.attrs["href"] = safeURL(expr.value)
+			if expr != nil {
+				out.attrs["href"] = safeURL(expr.value)
+			} else {
+				out.attrs["href"] = ""
+			}
 		} else {
 			out.attrs["href"] = safeURL(in.value)
 		}
@@ -77,10 +82,16 @@ func compile(in bbTag, expr *htmlTag) *htmlTag {
 	case in.key == "img":
 		out.name = "img"
 		if in.value == "" {
-			out.attrs["src"] = safeURL(expr.value)
+			if expr != nil {
+				out.attrs["src"] = safeURL(expr.value)
+			} else {
+				out.attrs["src"] = ""
+			}
 		} else {
 			out.attrs["src"] = safeURL(in.value)
-			out.attrs["alt"] = expr.value
+			if expr != nil {
+				out.attrs["alt"] = expr.value
+			}
 		}
 	case in.key == "i" || in.key == "b" || in.key == "s" || in.key == "u":
 		out.name = in.key

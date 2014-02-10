@@ -85,11 +85,11 @@ arg: ID
 
 args:
 	{ $$ = nil }
-	| args arg
+	| arg args
 	{
 		$$ = &argument{}
-		$$.others = $1
-		$$.arg = $2
+		$$.others = $2
+		$$.arg = $1
 	}
 	;
 
