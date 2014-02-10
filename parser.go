@@ -41,7 +41,7 @@ var yyStatenames = []string{}
 
 const yyEofCode = 1
 const yyErrCode = 2
-const yyMaxDepth = 300
+const yyMaxDepth = 200
 
 //line parser.y:100
 

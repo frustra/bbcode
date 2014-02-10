@@ -120,19 +120,18 @@ func compile(in bbTag, expr *htmlTag) *htmlTag {
 					"allowscriptaccess": "always",
 				}
 
-				for name, value := range params {
-					param := newHtmlTag("")
-					param.name = "param"
-					param.attrs["name"] = name
-					param.attrs["value"] = value
-					out.appendChild(param)
-				}
 				embed := newHtmlTag("")
 				embed.name = "embed"
 				embed.attrs["type"] = "application/x-shockwave-flash"
 				embed.attrs["width"] = "620"
 				embed.attrs["height"] = "349"
 				for name, value := range params {
+					param := newHtmlTag("")
+					param.name = "param"
+					param.attrs["name"] = name
+					param.attrs["value"] = value
+					out.appendChild(param)
+
 					if name == "movie" {
 						name = "src"
 					}
