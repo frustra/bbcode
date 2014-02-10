@@ -12,4 +12,5 @@ yacc:
 	go tool yacc -o parser.y.go parser.y
 	@echo "$$PARSER_HEADER" | cat - parser.y.go > parser.go
 	@rm parser.y.go
+	sed -i -e "s/const yyMaxDepth = 200/const yyMaxDepth = 1000/g" parser.go
 	go fmt parser.go
