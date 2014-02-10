@@ -43,7 +43,7 @@ const yyEofCode = 1
 const yyErrCode = 2
 const yyMaxDepth = 200
 
-//line parser.y:96
+//line parser.y:100
 
 //line yacctab:1
 var yyExca = []int{
@@ -347,15 +347,17 @@ yydefault:
 	case 1:
 		//line parser.y:30
 		{
-			writeExpression(yylex, yyS[yypt-0].htmlTag.string())
+			if yyS[yypt-0].htmlTag != nil {
+				writeExpression(yylex, yyS[yypt-0].htmlTag.string())
+			}
 		}
 	case 2:
-		//line parser.y:34
+		//line parser.y:38
 		{
 			yyVAL.htmlTag = nil
 		}
 	case 3:
-		//line parser.y:36
+		//line parser.y:40
 		{
 			if yyS[yypt-0].htmlTag == nil {
 				yyVAL.htmlTag = yyS[yypt-1].htmlTag
@@ -364,7 +366,7 @@ yydefault:
 			}
 		}
 	case 4:
-		//line parser.y:46
+		//line parser.y:50
 		{
 			if strings.EqualFold(yyS[yypt-2].bbTag.key, yyS[yypt-0].str) {
 				yyVAL.htmlTag = compile(yyS[yypt-2].bbTag, yyS[yypt-1].htmlTag)
@@ -373,27 +375,27 @@ yydefault:
 			}
 		}
 	case 5:
-		//line parser.y:54
+		//line parser.y:58
 		{
 			yyVAL.htmlTag = newHtmlTag(yyS[yypt-2].bbTag.string()).appendChild(yyS[yypt-1].htmlTag)
 		}
 	case 6:
-		//line parser.y:56
+		//line parser.y:60
 		{
 			yyVAL.htmlTag = newHtmlTag("[/" + yyS[yypt-1].str + "]")
 		}
 	case 7:
-		//line parser.y:58
+		//line parser.y:62
 		{
 			yyVAL.htmlTag = newline()
 		}
 	case 8:
-		//line parser.y:60
+		//line parser.y:64
 		{
 			yyVAL.htmlTag = newHtmlTag(yyS[yypt-0].str)
 		}
 	case 9:
-		//line parser.y:64
+		//line parser.y:68
 		{
 			yyVAL.bbTag.key = yyS[yypt-2].value.key
 			yyVAL.bbTag.value = yyS[yypt-2].value.value
@@ -402,28 +404,28 @@ yydefault:
 			}
 		}
 	case 10:
-		//line parser.y:74
+		//line parser.y:78
 		{
 			yyVAL.str = yyS[yypt-1].str
 		}
 	case 11:
-		//line parser.y:78
+		//line parser.y:82
 		{
 			yyVAL.value.key = yyS[yypt-0].str
 		}
 	case 12:
-		//line parser.y:80
+		//line parser.y:84
 		{
 			yyVAL.value.key = yyS[yypt-2].str
 			yyVAL.value.value = yyS[yypt-0].str
 		}
 	case 13:
-		//line parser.y:87
+		//line parser.y:91
 		{
 			yyVAL.argument = nil
 		}
 	case 14:
-		//line parser.y:89
+		//line parser.y:93
 		{
 			yyVAL.argument = &argument{}
 			yyVAL.argument.others = yyS[yypt-0].argument

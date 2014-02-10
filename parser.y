@@ -27,7 +27,11 @@ import "strings"
 %%
 
 full: list
-	{ writeExpression(yylex, $1.string()) }
+	{
+		if $1 != nil {
+			writeExpression(yylex, $1.string())
+		}
+	}
 	;
 
 list:

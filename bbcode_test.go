@@ -7,6 +7,7 @@ package bbcode
 import "testing"
 
 var basicTests = map[string]string{
+	``: ``,
 	`[url]http://example.com[/url]`: `<a href="http://example.com">http://example.com</a>`,
 	`[img]http://example.com[/img]`: `<img src="http://example.com">`,
 	`[img][/img]`:                   `<img src="">`,
