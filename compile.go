@@ -63,10 +63,6 @@ func (t *htmlTag) appendChild(child *htmlTag) *htmlTag {
 	return t
 }
 
-var tagMap = map[string]string{
-	"quote":  "blockquote",
-	"strike": "s",
-}
 var youtubeRegex = regexp.MustCompile(`(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?([a-zA-Z0-9]+)`)
 
 // compile transforms a tag and subexpression into an HTML string.
@@ -105,13 +101,18 @@ func compile(in bbTag, expr *htmlTag) *htmlTag {
 		if expr == nil {
 			out.value = "Embedded video"
 		} else {
+			out.name = "div"
+			out.attrs["class"] = "embedded-video"
+
+			obj := newHtmlTag("Embedded video")
+			out.appendChild(obj)
+
 			matches := youtubeRegex.FindStringSubmatch(expr.value)
-			if matches == nil {
-				out.value = "Embedded video"
-			} else {
-				out.name = "object"
-				out.attrs["width"] = "620"
-				out.attrs["height"] = "349"
+			if matches != nil {
+				obj = newHtmlTag("")
+				obj.name = "object"
+				obj.attrs["width"] = "620"
+				obj.attrs["height"] = "349"
 
 				params := map[string]string{
 					"movie":             fmt.Sprintf("//www.youtube.com/v/%s?version=3", matches[1]),
@@ -130,14 +131,15 @@ func compile(in bbTag, expr *htmlTag) *htmlTag {
 					param.name = "param"
 					param.attrs["name"] = name
 					param.attrs["value"] = value
-					out.appendChild(param)
+					obj.appendChild(param)
 
 					if name == "movie" {
 						name = "src"
 					}
 					embed.attrs[name] = value
 				}
-				out.appendChild(embed)
+				obj.appendChild(embed)
+				out.appendChild(obj)
 			}
 		}
 	case "center":
@@ -154,10 +156,25 @@ func compile(in bbTag, expr *htmlTag) *htmlTag {
 		out.appendChild(expr)
 	case "spoiler":
 		out.name = "div"
-		out.attrs["class"] = "spoiler-tag"
+		out.attrs["class"] = "expandable collapsed"
 		out.appendChild(expr)
-	case "quote", "strike":
-		out.name = tagMap[in.key]
+	case "quote":
+		out.name = "blockquote"
+		who := ""
+		if name, ok := in.args["name"]; ok && name != "" {
+			who = name
+		} else {
+			who = in.value
+		}
+		if who != "" {
+			cite := newHtmlTag("")
+			cite.name = "cite"
+			cite.appendChild(newHtmlTag(who + " said:"))
+			out.appendChild(cite)
+		}
+		out.appendChild(expr)
+	case "strike":
+		out.name = "s"
 		out.appendChild(expr)
 	case "i", "b", "u", "code":
 		out.name = in.key
