@@ -88,6 +88,15 @@ func TestFull(t *testing.T) {
 	}
 }
 
+func BenchmarkFull(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_, err := Compile(fullTestInput)
+		if err != nil {
+			b.Fatalf("Unexpected error %v while benchmarking %s\n", err, fullTestInput)
+		}
+	}
+}
+
 var brokenTests = map[string]string{
 	"[b]":        `[b]`,
 	"[b]\n":      `[b]<br>`,
