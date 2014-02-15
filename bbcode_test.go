@@ -44,10 +44,8 @@ var basicTests = map[string]string{
 
 func TestCompile(t *testing.T) {
 	for in, out := range basicTests {
-		result, err := Compile(in)
-		if err != nil {
-			t.Errorf("Unexpected error %v while compiling %s\n", err, in)
-		} else if result != out {
+		result := Compile(in)
+		if result != out {
 			t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", in, out, result)
 		}
 	}
@@ -65,10 +63,8 @@ var sanitizationTests = map[string]string{
 
 func TestSanitization(t *testing.T) {
 	for in, out := range sanitizationTests {
-		result, err := Compile(in)
-		if err != nil {
-			t.Errorf("Unexpected error %v while compiling %s\n", err, in)
-		} else if result != out {
+		result := Compile(in)
+		if result != out {
 			t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", in, out, result)
 		}
 	}
@@ -80,20 +76,15 @@ var fullTestInput = `the quick brown [b]fox[/b]:
 var fullTestOutput = `the quick brown <b>fox</b>:<br><a href="http://example"><img src="http://example.png"></a>`
 
 func TestFull(t *testing.T) {
-	result, err := Compile(fullTestInput)
-	if err != nil {
-		t.Errorf("Unexpected error %v while compiling %s\n", err, fullTestInput)
-	} else if result != fullTestOutput {
+	result := Compile(fullTestInput)
+	if result != fullTestOutput {
 		t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", fullTestInput, fullTestOutput, result)
 	}
 }
 
 func BenchmarkFull(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_, err := Compile(fullTestInput)
-		if err != nil {
-			b.Fatalf("Unexpected error %v while benchmarking %s\n", err, fullTestInput)
-		}
+		Compile(fullTestInput)
 	}
 }
 
@@ -113,10 +104,8 @@ var brokenTests = map[string]string{
 
 func TestBroken(t *testing.T) {
 	for in, out := range brokenTests {
-		result, err := Compile(in)
-		if err != nil {
-			t.Errorf("Unexpected error %v while compiling %s\n", err, in)
-		} else if result != out {
+		result := Compile(in)
+		if result != out {
 			t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", in, out, result)
 		}
 	}

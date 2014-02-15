@@ -67,10 +67,10 @@ var youtubeRegex = regexp.MustCompile(`(?:https?:\/\/)?(?:www\.)?(?:youtube\.com
 
 // compile transforms a tag and subexpression into an HTML string.
 // It is only used by the generated parser code.
-func compile(in bbTag, expr *htmlTag) *htmlTag {
+func compile(in bbOpeningTag, expr *htmlTag) *htmlTag {
 	var out = newHtmlTag("")
 
-	switch in.key {
+	switch in.name {
 	case "url":
 		out.name = "a"
 		if in.value == "" {
@@ -177,7 +177,7 @@ func compile(in bbTag, expr *htmlTag) *htmlTag {
 		out.name = "s"
 		out.appendChild(expr)
 	case "i", "b", "u", "code":
-		out.name = in.key
+		out.name = in.name
 		out.appendChild(expr)
 	}
 	return out

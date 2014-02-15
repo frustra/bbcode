@@ -4,25 +4,22 @@
 
 %{
 package bbcode
-
-import "strings"
 %}
 
 %union{
 	str string
 	value stringPair
 	argument *argument
-	bbTag bbTag
+	openingTag bbOpeningTag
+	closingTag bbClosingTag
 	htmlTag *htmlTag
 }
 
-%type <str> tag_end
-%type <value> arg
-%type <bbTag> tag_start
-%type <argument> args
 %type <htmlTag> list
 %type <htmlTag> expr
-%token <str> TEXT ID NEWLINE MISSING_CLOSING CLOSING_TAG_OPENING MISSING_OPENING
+%token <str> TEXT MISSING_CLOSING MISSING_OPENING ID NEWLINE
+%token <openingTag> OPENING
+%token <closingTag> CLOSING
 
 %%
 
@@ -46,15 +43,11 @@ list:
 	}
 	;
 
-expr: tag_start list tag_end
+expr: OPENING list CLOSING
 	{
-		if strings.EqualFold($1.key, $3) {
-			$$ = compile($1, $2)
-		} else {
-			$$ = newHtmlTag($1.string()).appendChild($2).appendChild(newHtmlTag("[/" + $3 + "]"))
-		}
+		compile($1, $2)
 	}
-	| tag_start list MISSING_CLOSING
+	| OPENING list MISSING_CLOSING
 	{ $$ = newHtmlTag($1.string()).appendChild($2) }
 	| MISSING_OPENING ID ']'
 	{ $$ = newHtmlTag("[/" + $2 + "]") }
@@ -62,39 +55,6 @@ expr: tag_start list tag_end
 	{ $$ = newline() }
 	| TEXT
 	{ $$ = newHtmlTag($1) }
-	;
-
-tag_start: '[' arg args ']'
-	{
-		$$.key = $2.key
-		$$.value = $2.value
-		if $3 != nil {
-			$$.args = $3.expand()
-		}
-	}
-	;
-
-tag_end: CLOSING_TAG_OPENING ID ']'
-	{ $$ = $2 }
-	;
-
-arg: ID
-	{ $$.key = $1 }
-	| ID '=' TEXT
-	{
-		$$.key = $1
-		$$.value = $3
-	}
-	;
-
-args:
-	{ $$ = nil }
-	| arg args
-	{
-		$$ = &argument{}
-		$$.others = $2
-		$$.arg = $1
-	}
 	;
 
 %%

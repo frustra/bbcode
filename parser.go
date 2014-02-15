@@ -10,32 +10,33 @@ package bbcode
 import __yyfmt__ "fmt"
 
 //line parser.y:6
-import "strings"
-
-//line parser.y:11
+//line parser.y:9
 type yySymType struct {
-	yys      int
-	str      string
-	value    stringPair
-	argument *argument
-	bbTag    bbTag
-	htmlTag  *htmlTag
+	yys        int
+	str        string
+	value      stringPair
+	argument   *argument
+	openingTag bbOpeningTag
+	closingTag bbClosingTag
+	htmlTag    *htmlTag
 }
 
 const TEXT = 57346
-const ID = 57347
-const NEWLINE = 57348
-const MISSING_CLOSING = 57349
-const CLOSING_TAG_OPENING = 57350
-const MISSING_OPENING = 57351
+const MISSING_CLOSING = 57347
+const MISSING_OPENING = 57348
+const ID = 57349
+const NEWLINE = 57350
+const OPENING = 57351
+const CLOSING = 57352
 
 var yyToknames = []string{
 	"TEXT",
+	"MISSING_CLOSING",
+	"MISSING_OPENING",
 	"ID",
 	"NEWLINE",
-	"MISSING_CLOSING",
-	"CLOSING_TAG_OPENING",
-	"MISSING_OPENING",
+	"OPENING",
+	"CLOSING",
 }
 var yyStatenames = []string{}
 
@@ -43,7 +44,7 @@ const yyEofCode = 1
 const yyErrCode = 2
 const yyMaxDepth = 1000
 
-//line parser.y:100
+//line parser.y:60
 
 //line yacctab:1
 var yyExca = []int{
@@ -52,51 +53,45 @@ var yyExca = []int{
 	-2, 0,
 }
 
-const yyNprod = 15
+const yyNprod = 9
 const yyPrivate = 57344
 
 var yyTokenNames []string
 var yyStates []string
 
-const yyLast = 25
+const yyLast = 13
 
 var yyAct = []int{
 
-	18, 7, 20, 6, 25, 22, 5, 19, 8, 17,
-	15, 16, 13, 2, 21, 11, 12, 9, 10, 24,
-	23, 1, 3, 4, 14,
+	7, 13, 5, 12, 6, 4, 10, 2, 11, 1,
+	3, 8, 9,
 }
 var yyPact = []int{
 
-	-3, -1000, -1000, -3, -3, 10, -1000, -1000, 7, -1000,
-	3, -1, 7, -10, -1000, -1000, 9, -1000, -5, 7,
-	15, -6, -1000, -1000, -1000, -1000,
+	-4, -1000, -1000, -4, -4, -1, -1000, -1000, -1000, -2,
+	-10, -1000, -1000, -1000,
 }
 var yyPgo = []int{
 
-	0, 24, 7, 23, 0, 13, 22, 21,
+	0, 7, 10, 9,
 }
 var yyR1 = []int{
 
-	0, 7, 5, 5, 6, 6, 6, 6, 6, 3,
-	1, 2, 2, 4, 4,
+	0, 3, 1, 1, 2, 2, 2, 2, 2,
 }
 var yyR2 = []int{
 
-	0, 1, 0, 2, 3, 3, 3, 1, 1, 4,
-	3, 1, 3, 0, 2,
+	0, 1, 0, 2, 3, 3, 3, 1, 1,
 }
 var yyChk = []int{
 
-	-1000, -7, -5, -6, -3, 9, 6, 4, 11, -5,
-	-5, 5, -2, 5, -1, 7, 8, 10, -4, -2,
-	12, 5, 10, -4, 4, 10,
+	-1000, -3, -1, -2, 9, 6, 8, 4, -1, -1,
+	7, 10, 5, 11,
 }
 var yyDef = []int{
 
-	2, -2, 1, 2, 2, 0, 7, 8, 0, 3,
-	0, 0, 13, 11, 4, 5, 0, 6, 0, 13,
-	0, 0, 9, 14, 12, 10,
+	2, -2, 1, 2, 2, 0, 7, 8, 3, 0,
+	0, 4, 5, 6,
 }
 var yyTok1 = []int{
 
@@ -106,14 +101,14 @@ var yyTok1 = []int{
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-	3, 12, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-	3, 11, 3, 10,
+	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+	3, 3, 3, 11,
 }
 var yyTok2 = []int{
 
-	2, 3, 4, 5, 6, 7, 8, 9,
+	2, 3, 4, 5, 6, 7, 8, 9, 10,
 }
 var yyTok3 = []int{
 	0,
@@ -345,19 +340,19 @@ yydefault:
 	switch yynt {
 
 	case 1:
-		//line parser.y:30
+		//line parser.y:27
 		{
 			if yyS[yypt-0].htmlTag != nil {
 				writeExpression(yylex, yyS[yypt-0].htmlTag.string())
 			}
 		}
 	case 2:
-		//line parser.y:38
+		//line parser.y:35
 		{
 			yyVAL.htmlTag = nil
 		}
 	case 3:
-		//line parser.y:40
+		//line parser.y:37
 		{
 			if yyS[yypt-0].htmlTag == nil {
 				yyVAL.htmlTag = yyS[yypt-1].htmlTag
@@ -366,70 +361,29 @@ yydefault:
 			}
 		}
 	case 4:
-		//line parser.y:50
+		//line parser.y:47
 		{
-			if strings.EqualFold(yyS[yypt-2].bbTag.key, yyS[yypt-0].str) {
-				yyVAL.htmlTag = compile(yyS[yypt-2].bbTag, yyS[yypt-1].htmlTag)
-			} else {
-				yyVAL.htmlTag = newHtmlTag(yyS[yypt-2].bbTag.string()).appendChild(yyS[yypt-1].htmlTag).appendChild(newHtmlTag("[/" + yyS[yypt-0].str + "]"))
-			}
+			compile(yyS[yypt-2].openingTag, yyS[yypt-1].htmlTag)
 		}
 	case 5:
-		//line parser.y:58
+		//line parser.y:51
 		{
-			yyVAL.htmlTag = newHtmlTag(yyS[yypt-2].bbTag.string()).appendChild(yyS[yypt-1].htmlTag)
+			yyVAL.htmlTag = newHtmlTag(yyS[yypt-2].openingTag.string()).appendChild(yyS[yypt-1].htmlTag)
 		}
 	case 6:
-		//line parser.y:60
+		//line parser.y:53
 		{
 			yyVAL.htmlTag = newHtmlTag("[/" + yyS[yypt-1].str + "]")
 		}
 	case 7:
-		//line parser.y:62
+		//line parser.y:55
 		{
 			yyVAL.htmlTag = newline()
 		}
 	case 8:
-		//line parser.y:64
+		//line parser.y:57
 		{
 			yyVAL.htmlTag = newHtmlTag(yyS[yypt-0].str)
-		}
-	case 9:
-		//line parser.y:68
-		{
-			yyVAL.bbTag.key = yyS[yypt-2].value.key
-			yyVAL.bbTag.value = yyS[yypt-2].value.value
-			if yyS[yypt-1].argument != nil {
-				yyVAL.bbTag.args = yyS[yypt-1].argument.expand()
-			}
-		}
-	case 10:
-		//line parser.y:78
-		{
-			yyVAL.str = yyS[yypt-1].str
-		}
-	case 11:
-		//line parser.y:82
-		{
-			yyVAL.value.key = yyS[yypt-0].str
-		}
-	case 12:
-		//line parser.y:84
-		{
-			yyVAL.value.key = yyS[yypt-2].str
-			yyVAL.value.value = yyS[yypt-0].str
-		}
-	case 13:
-		//line parser.y:91
-		{
-			yyVAL.argument = nil
-		}
-	case 14:
-		//line parser.y:93
-		{
-			yyVAL.argument = &argument{}
-			yyVAL.argument.others = yyS[yypt-0].argument
-			yyVAL.argument.arg = yyS[yypt-1].value
 		}
 	}
 	goto yystack /* stack new state and value */
