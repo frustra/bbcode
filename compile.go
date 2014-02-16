@@ -166,12 +166,14 @@ func compile(in bbTag, expr *htmlTag) *htmlTag {
 		} else {
 			who = in.value
 		}
+		cite := newHtmlTag("")
+		cite.name = "cite"
 		if who != "" {
-			cite := newHtmlTag("")
-			cite.name = "cite"
 			cite.appendChild(newHtmlTag(who + " said:"))
-			out.appendChild(cite)
+		} else {
+			cite.appendChild(newHtmlTag("Quote"))
 		}
+		out.appendChild(cite)
 		out.appendChild(expr)
 	case "strike":
 		out.name = "s"
