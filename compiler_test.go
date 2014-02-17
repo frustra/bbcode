@@ -93,14 +93,14 @@ var brokenTests = map[string]string{
 	"[b]\n":      `[b]<br>`,
 	"[b]hello":   `[b]hello`,
 	"[b]hello\n": `[b]hello<br>`,
-	"the quick brown [b][i]fox[/b][/i]\n[i]\n[b]hi[/b]][b][url=http://example[img]http://example.png[/img][/url][b]": `the quick brown [b][i]fox[/b][/i]<br>[i]<br><b>hi</b>][b][url=http://example[img]http://example.png[/img][/url][b]`,
+	"the quick brown [b][i]fox[/b][/i]\n[i]\n[b]hi[/b]][b][url=http://example[img]http://example.png[/img][/url][b]": `the quick brown <b>[i]fox</b>[/i]<br>[i]<br><b>hi</b>][b][url=http://example<img src="http://example.png">[/url][b]`,
 	"the quick brown[/b][b]hello[/b]":                                                                                `the quick brown[/b]<b>hello</b>`,
 	"the quick brown[/b][/code]":                                                                                     `the quick brown[/b][/code]`,
-	"[ b][	i]the quick brown[/i][/b=hello]": `[b]<i>the quick brown</i>[/b=hello]`,
-	"[b [herp@#$%]]the quick brown[/b]": `<b>]the quick brown</b>`,
+	"[ b][	i]the quick brown[/i][/b=hello]": `[ b]<i>the quick brown</i>[/b=hello]`,
+	"[b [herp@#$%]]the quick brown[/b]": `[b [herp@#$%]]the quick brown[/b]`,
 	"[b=hello a=hi	q]the quick brown[/b]": `<b>the quick brown</b>`,
 	"[b]hi[":     `[b]hi[`,
-	"[b hi=derp": `[b]hi[`,
+	"[b hi=derp": `[b hi=derp`,
 }
 
 func TestBroken(t *testing.T) {

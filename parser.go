@@ -6,14 +6,21 @@ package bbcode
 
 type BBCodeNode struct {
 	Token
-	Parent   *BBCodeNode
-	Children []*BBCodeNode
+	Parent     *BBCodeNode
+	Children   []*BBCodeNode
+	ClosingTag *bbClosingTag
 }
 
 func (n *BBCodeNode) appendChild(t Token) *BBCodeNode {
 	if t.ID == CLOSING_TAG {
-		if n.Parent != nil && n.ID == OPENING_TAG && n.Value.(bbOpeningTag).Name == t.Value.(bbClosingTag).Name {
-			return n.Parent
+		curr := n
+		closing := t.Value.(bbClosingTag)
+		for curr.Parent != nil {
+			if curr.ID == OPENING_TAG && curr.Value.(bbOpeningTag).Name == closing.Name {
+				curr.ClosingTag = &closing
+				return curr.Parent
+			}
+			curr = curr.Parent
 		}
 	}
 
@@ -23,7 +30,7 @@ func (n *BBCodeNode) appendChild(t Token) *BBCodeNode {
 		return n
 	}
 
-	node := &BBCodeNode{t, n, make([]*BBCodeNode, 0)}
+	node := &BBCodeNode{t, n, make([]*BBCodeNode, 0), nil}
 	n.Children = append(n.Children, node)
 	if t.ID == OPENING_TAG {
 		return node
@@ -33,10 +40,8 @@ func (n *BBCodeNode) appendChild(t Token) *BBCodeNode {
 }
 
 func Parse(tokens chan Token) *BBCodeNode {
-	var root *BBCodeNode
-	var curr *BBCodeNode
-	root = &BBCodeNode{Token{TEXT, ""}, nil, make([]*BBCodeNode, 0)}
-	curr = root
+	root := &BBCodeNode{Token{TEXT, ""}, nil, make([]*BBCodeNode, 0), nil}
+	curr := root
 	for tok := range tokens {
 		curr = curr.appendChild(tok)
 	}

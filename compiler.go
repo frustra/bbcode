@@ -37,6 +37,11 @@ func (c DefaultCompiler) Compile(node *BBCodeNode) *HTMLTag {
 		for _, child := range node.Children {
 			out.AppendChild(c.Compile(child))
 		}
+	} else if node.ClosingTag == nil {
+		out.Value = node.Value.(bbOpeningTag).Raw
+		for _, child := range node.Children {
+			out.AppendChild(c.Compile(child))
+		}
 	} else {
 		in := node.Value.(bbOpeningTag)
 		var expr *HTMLTag
