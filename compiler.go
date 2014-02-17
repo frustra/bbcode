@@ -18,7 +18,10 @@ type Compiler interface {
 	CompileRaw(node *BBCodeNode) *HTMLTag
 }
 
-type DefaultCompiler struct{}
+type DefaultCompiler struct {
+	AutoCloseTags              bool
+	IgnoreUnmatchedClosingTags bool
+}
 
 var youtubeRegex = regexp.MustCompile(`(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?([a-zA-Z0-9]+)`)
 
@@ -33,11 +36,13 @@ func (c DefaultCompiler) Compile(node *BBCodeNode) *HTMLTag {
 			out.AppendChild(c.Compile(child))
 		}
 	} else if node.ID == CLOSING_TAG {
-		out.Value = node.Value.(bbClosingTag).Raw
+		if !c.IgnoreUnmatchedClosingTags {
+			out.Value = node.Value.(bbClosingTag).Raw
+		}
 		for _, child := range node.Children {
 			out.AppendChild(c.Compile(child))
 		}
-	} else if node.ClosingTag == nil {
+	} else if node.ClosingTag == nil && !c.AutoCloseTags {
 		out.Value = node.Value.(bbOpeningTag).Raw
 		for _, child := range node.Children {
 			out.AppendChild(c.Compile(child))

@@ -7,7 +7,7 @@ package bbcode
 
 // Compile transforms a string of BBCode to HTML.
 func Compile(str string) string {
-	return CompileCustom(str, DefaultCompiler{})
+	return CompileCustom(str, DefaultCompiler{false, false})
 }
 
 // CompileCustom uses a custom Compiler implementation to transform a string of
