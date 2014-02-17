@@ -112,16 +112,27 @@ func TestBroken(t *testing.T) {
 	}
 }
 
-var urlTests = map[string]string{
-	"http://example.com/path?query=value#fragment": "http://example.com/path?query=value#fragment",
-	"<script>http://example.com":                   "%3Cscript%3Ehttp://example.com",
+var customTests = map[string]string{
+	`[img]//foo/bar.png[/img]`: `<img src="//custom.png">`,
 }
 
-func TestSafeURL(t *testing.T) {
-	for in, out := range urlTests {
-		result := safeURL(in)
+type testCustomCompiler struct {
+	DefaultCompiler
+}
+
+func (c testCustomCompiler) Compile(node *BBCodeNode) *HTMLTag {
+	tag := c.DefaultCompiler.Compile(node)
+	if tag.Name == "img" {
+		tag.Value = "//custom.png"
+	}
+	return tag
+}
+
+func TestCompileCustom(t *testing.T) {
+	for in, out := range basicTests {
+		result := CompileCustom(in, testCustomCompiler{})
 		if result != out {
-			t.Errorf("Failed to sanitize %s.\nExpected: %s, got: %s", in, out, result)
+			t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", in, out, result)
 		}
 	}
 }
