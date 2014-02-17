@@ -71,16 +71,7 @@ func compile(node *BBCodeNode) *htmlTag {
 	var out = newHtmlTag("")
 	if node.id == TEXT {
 		out.value = node.value.(string)
-		if strings.ContainsRune(out.value, '\n') {
-			parts := strings.Split(out.value, "\n")
-			for i, part := range parts {
-				if i == 0 {
-					out.value = parts[i]
-				} else {
-					out.appendChild(newline()).appendChild(newHtmlTag(part))
-				}
-			}
-		}
+		insertNewlines(out)
 		for _, child := range node.Children {
 			out.appendChild(compile(child))
 		}
@@ -209,13 +200,51 @@ func compile(node *BBCodeNode) *htmlTag {
 		case "strike":
 			out.name = "s"
 			out.appendChild(expr)
-		case "i", "b", "u", "code":
+		case "code":
+			out.name = "code"
+			for _, child := range node.Children {
+				out.appendChild(compileRaw(child))
+			}
+		case "i", "b", "u":
 			out.name = in.name
 			out.appendChild(expr)
 		default:
 			out.value = in.raw
-			out.appendChild(expr)
+			insertNewlines(out)
+			out.appendChild(expr).appendChild(newHtmlTag("[/" + in.name + "]"))
 		}
+	}
+	return out
+}
+
+func insertNewlines(out *htmlTag) {
+	if strings.ContainsRune(out.value, '\n') {
+		parts := strings.Split(out.value, "\n")
+		for i, part := range parts {
+			if i == 0 {
+				out.value = parts[i]
+			} else {
+				out.appendChild(newline()).appendChild(newHtmlTag(part))
+			}
+		}
+	}
+}
+
+func compileRaw(in *BBCodeNode) *htmlTag {
+	out := newHtmlTag("")
+	if in.id == TEXT {
+		out.value = in.value.(string)
+	} else if in.id == OPENING_TAG {
+		out.value = in.value.(bbOpeningTag).raw
+	} else if in.id == CLOSING_TAG {
+		out.value = in.value.(bbClosingTag).raw
+	}
+	insertNewlines(out)
+	for _, child := range in.Children {
+		out.appendChild(compileRaw(child))
+	}
+	if in.id == OPENING_TAG {
+		out.appendChild(newHtmlTag("[/" + in.value.(bbOpeningTag).name + "]"))
 	}
 	return out
 }

@@ -4,10 +4,7 @@
 
 package bbcode
 
-import (
-	"math/rand"
-	"testing"
-)
+import "testing"
 
 var basicTests = map[string]string{
 	``: ``,
@@ -126,32 +123,5 @@ func TestSafeURL(t *testing.T) {
 		if result != out {
 			t.Errorf("Failed to sanitize %s.\nExpected: %s, got: %s", in, out, result)
 		}
-	}
-}
-
-var tokenParts = []string{
-	"[b]",
-	"[/b]",
-	"\n",
-	"b",
-	"url",
-	"derp",
-	"hi",
-	"[url=",
-	"=",
-	"[",
-	"[/",
-	"]",
-	" ",
-	" ",
-}
-
-func TestRandom(t *testing.T) {
-	for i := 0; i < 1000; i++ {
-		in := ""
-		for j := 0; j < 100; j++ {
-			in += tokenParts[rand.Int()%len(tokenParts)]
-		}
-		Compile(in)
 	}
 }
