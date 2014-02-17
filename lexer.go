@@ -6,206 +6,255 @@ package bbcode
 
 import (
 	"bytes"
-	"errors"
-	"regexp"
 	"strings"
-	"unicode"
 )
 
-type lexerState int
+type Token struct {
+	ID    string
+	Value interface{}
+}
+
+type lexer struct {
+	input  string
+	tokens chan Token
+
+	start int
+	end   int
+	pos   int
+
+	tagName     string
+	tagValue    string
+	tagTmpName  string
+	tagTmpValue string
+	tagArgs     map[string]string
+}
 
 const (
-	INIT_STATE lexerState = iota
-	TAG_START_STATE
-	TAG_END_STATE
-	TAG_ARGS_STATE
-	ARG_VALUE_STATE
+	TEXT        = "text"
+	OPENING_TAG = "opening"
+	CLOSING_TAG = "closing"
 )
-
-// Abuse of the generated types to keep parser state in the lexer
-type lexer struct {
-	str        []byte
-	lastTag    string
-	state      lexerState
-	tagsOpened int
-	buffer     bytes.Buffer
-	err        error
-}
-
-var (
-	tags            = []string{"url", "img", "b", "i", "u", "strike", "center", "color", "size", "quote", "code", "spoiler", "media"}
-	tagOpenRegexps  []*regexp.Regexp
-	tagCloseRegexps []*regexp.Regexp
-	codeCloseRegex  *regexp.Regexp
-)
-
-func init() {
-	for _, tag := range tags {
-		r := regexp.MustCompile(`(?i)^\[[ \t]*` + tag + `[\]= \t]`)
-		tagOpenRegexps = append(tagOpenRegexps, r)
-		r = regexp.MustCompile(`(?i)^\[/[ \t]*` + tag + `[ \t]*\]`)
-		if tag == "code" {
-			codeCloseRegex = r
-		} else {
-			tagCloseRegexps = append(tagCloseRegexps, r)
-		}
-	}
-}
 
 func newLexer(str string) *lexer {
 	return &lexer{
-		str: []byte(str),
+		input:  str,
+		tokens: make(chan Token),
 	}
 }
 
-func (l *lexer) Lex(lval *yySymType) int {
-	if len(l.str) <= 0 {
-		if l.tagsOpened > 0 {
-			l.tagsOpened--
-			return MISSING_CLOSING
-		} else {
-			return 0
-		}
-	}
-	var c byte = l.str[0]
+func Lex(str string) chan Token {
+	lex := newLexer(str)
+	go lex.runStateMachine()
+	return lex.tokens
+}
 
-	switch l.state {
-	case TAG_START_STATE:
-		for unicode.IsSpace(rune(c)) {
-			l.str = l.str[1:]
-			c = l.str[0]
+func (l *lexer) runStateMachine() {
+	for state := lexText; state != nil; {
+		state = state(l)
+	}
+	close(l.tokens)
+}
+
+func (l *lexer) emit(id string, value interface{}) {
+	if l.pos > 0 {
+		// fmt.Println(l.input)
+		// fmt.Printf("Emit %s: %+v\n", id, value)
+		l.tokens <- Token{id, value}
+		l.input = l.input[l.pos:]
+		l.pos = 0
+	}
+}
+
+type stateFn func(*lexer) stateFn
+
+func lexText(l *lexer) stateFn {
+	for l.pos < len(l.input) {
+		if l.input[l.pos] == '[' {
+			l.emit(TEXT, l.input[:l.pos])
+			return lexOpenBracket
 		}
-		str := strings.ToLower(string(l.str))
-		for _, tag := range tags {
-			if strings.HasPrefix(str, tag) {
-				lval.str = tag
-				l.lastTag = tag
-				l.str = l.str[len(tag):]
-				l.state = TAG_ARGS_STATE
-				return ID
-			}
-		}
-	case TAG_END_STATE:
-		for unicode.IsSpace(rune(c)) {
-			l.str = l.str[1:]
-			c = l.str[0]
-		}
-		str := strings.ToLower(string(l.str))
-		for _, tag := range tags {
-			if strings.HasPrefix(str, tag) {
-				lval.str = tag
-				l.lastTag = ""
-				l.str = l.str[len(tag):]
-				l.state = TAG_ARGS_STATE
-				return ID
-			}
-		}
-	case TAG_ARGS_STATE:
-		for unicode.IsSpace(rune(c)) {
-			l.str = l.str[1:]
-			c = l.str[0]
-		}
-		switch {
-		case c == ']':
-			l.str = l.str[1:]
-			l.state = INIT_STATE
-			return int(c)
-		case c == '=':
-			l.str = l.str[1:]
-			l.state = ARG_VALUE_STATE
-			return int(c)
+		l.pos++
+	}
+	l.emit(TEXT, l.input)
+	return nil
+}
+
+func lexOpenBracket(l *lexer) stateFn {
+	l.pos++
+	closingTag := false
+	for l.pos < len(l.input) {
+		switch l.input[l.pos] {
+		case '[', ']':
+			return lexText
 		default:
-			offset := 1
-			for offset < len(l.str) {
-				curr := l.str[offset]
-				if curr == ']' || curr == '=' {
-					break
-				}
-				offset++
-			}
-			lval.str = string(l.str[0:offset])
-			l.str = l.str[offset:]
-			return ID
-		}
-	case ARG_VALUE_STATE:
-		for unicode.IsSpace(rune(c)) {
-			l.str = l.str[1:]
-			c = l.str[0]
-		}
-		switch {
-		case c == '"' || c == '\'':
-			return 0 //l.LexQuotedString(c, lval)
-		}
-		offset := 1
-		for offset < len(l.str) {
-			curr := l.str[offset]
-			if curr == ']' || curr == ' ' || curr == '\t' {
-				break
-			}
-			offset++
-		}
-		lval.str = string(l.str[0:offset])
-		l.str = l.str[offset:]
-		l.state = TAG_ARGS_STATE
-		return TEXT
-	case INIT_STATE:
-		if c == '\n' {
-			l.str = l.str[1:]
-			return NEWLINE
-		}
-		if c == '[' {
-			if len(l.str) > 1 && l.str[1] == '/' {
-				if l.lastTag == "code" {
-					if codeCloseRegex.Match(l.str) {
-						l.str = l.str[2:]
-						l.state = TAG_END_STATE
-						if l.tagsOpened <= 0 {
-							return MISSING_OPENING
-						} else {
-							l.tagsOpened--
-							return CLOSING_TAG_OPENING
-						}
-					}
+			if l.input[l.pos] == '/' && !closingTag {
+				closingTag = true
+			} else if l.input[l.pos] != ' ' && l.input[l.pos] != '\t' && l.input[l.pos] != '\n' {
+				if closingTag {
+					return lexClosingTag
 				} else {
-					for _, r := range tagCloseRegexps {
-						if r.Match(l.str) {
-							l.str = l.str[2:]
-							l.state = TAG_END_STATE
-							if l.tagsOpened <= 0 {
-								return MISSING_OPENING
-							} else {
-								l.tagsOpened--
-								return CLOSING_TAG_OPENING
-							}
-						}
-					}
-				}
-			} else if l.lastTag != "code" {
-				for _, r := range tagOpenRegexps {
-					if r.Match(l.str) {
-						l.str = l.str[1:]
-						l.state = TAG_START_STATE
-						l.tagsOpened++
-						return int(c)
-					}
+					l.tagName = ""
+					l.tagValue = ""
+					l.tagArgs = make(map[string]string)
+					return lexTagName
 				}
 			}
 		}
-		offset := 1
-		for offset < len(l.str) {
-			curr := l.str[offset]
-			if curr == '[' || curr == '\n' {
-				break
-			}
-			offset++
-		}
-		lval.str = string(l.str[0:offset])
-		l.str = l.str[offset:]
-		return TEXT
+		l.pos++
 	}
-	return TEXT
+	l.emit(TEXT, l.input)
+	return nil
 }
 
-func (l *lexer) Error(s string) {
-	l.err = errors.New(s)
+func lexClosingTag(l *lexer) stateFn {
+	whiteSpace := false
+	l.start = l.pos
+	l.end = l.pos
+	for l.pos < len(l.input) {
+		switch l.input[l.pos] {
+		case '[':
+			return lexText
+		case ']':
+			l.pos++
+			l.emit(CLOSING_TAG, bbClosingTag{strings.ToLower(l.input[l.start:l.end]), l.input[:l.pos]})
+			return lexText
+		case ' ', '\t', '\n':
+			whiteSpace = true
+		default:
+			if whiteSpace {
+				return lexText
+			} else {
+				l.end++
+			}
+		}
+		l.pos++
+	}
+	l.emit(TEXT, l.input)
+	return nil
+}
+
+func lexTagName(l *lexer) stateFn {
+	l.tagTmpValue = ""
+	whiteSpace := false
+	l.start = l.pos
+	l.end = l.pos
+	for l.pos < len(l.input) {
+		switch l.input[l.pos] {
+		case '[':
+			return lexText
+		case ']':
+			l.tagTmpName = l.input[l.start:l.end]
+			return lexTagArgs
+		case '=':
+			l.tagTmpName = l.input[l.start:l.end]
+			return lexTagValue
+		case ' ', '\t', '\n':
+			whiteSpace = true
+		default:
+			if whiteSpace {
+				l.tagTmpName = l.input[l.start:l.end]
+				return lexTagArgs
+			} else {
+				l.end++
+			}
+		}
+		l.pos++
+	}
+	l.emit(TEXT, l.input)
+	return nil
+}
+
+func lexTagValue(l *lexer) stateFn {
+	l.pos++
+loop:
+	for l.pos < len(l.input) {
+		switch l.input[l.pos] {
+		case ' ', '\t', '\n':
+			l.pos++
+		case '"', '\'':
+			return lexQuotedValue
+		default:
+			break loop
+		}
+	}
+	l.start = l.pos
+	l.end = l.pos
+	for l.pos < len(l.input) {
+		switch l.input[l.pos] {
+		case '[':
+			return lexText
+		case ']':
+			l.tagTmpValue = l.input[l.start:l.end]
+			return lexTagArgs
+		case ' ', '\t', '\n':
+			l.tagTmpValue = l.input[l.start:l.end]
+			return lexTagArgs
+		default:
+			l.end++
+		}
+		l.pos++
+	}
+	l.emit(TEXT, l.input)
+	return nil
+}
+
+func lexQuotedValue(l *lexer) stateFn {
+	quoteChar := l.input[l.pos]
+	l.pos++
+	l.start = l.pos
+	var buf bytes.Buffer
+	escape := false
+	for l.pos < len(l.input) {
+		if escape {
+			if l.input[l.pos] == 'n' {
+				buf.WriteRune('\n')
+			} else {
+				buf.WriteRune(rune(l.input[l.pos]))
+			}
+			escape = false
+		} else {
+			switch l.input[l.pos] {
+			case '\\':
+				escape = true
+			case '\n':
+				l.pos = l.start
+				return lexText
+			case quoteChar:
+				l.pos++
+				l.tagTmpValue = buf.String()
+				return lexTagArgs
+			default:
+				buf.WriteRune(rune(l.input[l.pos]))
+			}
+		}
+		l.pos++
+	}
+	l.pos = l.start
+	return lexText
+}
+
+func lexTagArgs(l *lexer) stateFn {
+	if len(l.tagName) > 0 {
+		l.tagArgs[strings.ToLower(l.tagTmpName)] = l.tagTmpValue
+	} else {
+		l.tagName = l.tagTmpName
+		l.tagValue = l.tagTmpValue
+	}
+	for l.pos < len(l.input) {
+		switch l.input[l.pos] {
+		case '[':
+			return lexText
+		case ']':
+			l.pos++
+			l.emit(OPENING_TAG, bbOpeningTag{strings.ToLower(l.tagName), l.tagValue, l.tagArgs, l.input[:l.pos]})
+			return lexText
+		case ' ', '\t', '\n':
+			l.pos++
+		default:
+			l.tagTmpName = ""
+			return lexTagName
+		}
+	}
+	l.emit(TEXT, l.input)
+	return nil
 }

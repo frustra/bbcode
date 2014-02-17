@@ -5,55 +5,41 @@
 // Package bbcode implements a parser and HTML generator for BBCode.
 package bbcode
 
-// Compile transforms a string of BBCode to HTML
-func Compile(str string) (string, error) {
-	lex := newLexer(str)
-	yyParse(lex)
-	return lex.buffer.String(), lex.err
+// Compile transforms a string of BBCode to HTML.
+func Compile(str string) string {
+	return CompileCustom(str, DefaultCompiler{})
 }
 
-type stringPair struct {
-	key, value string
+// CompileCustom uses a custom Compiler implementation to transform a string of
+// BBCode to HTML.
+func CompileCustom(str string, compiler Compiler) string {
+	tokens := Lex(str)
+	tree := Parse(tokens)
+	return compiler.Compile(tree).String()
 }
 
-type argument struct {
-	others *argument
-	arg    stringPair
+type bbOpeningTag struct {
+	Name  string
+	Value string
+	Args  map[string]string
+	Raw   string
 }
 
-type bbTag struct {
-	key   string
-	value string
-	args  map[string]string
+type bbClosingTag struct {
+	Name string
+	Raw  string
 }
 
-func (t *bbTag) string() string {
-	str := t.key
-	if len(t.value) > 0 {
-		str += "=" + t.value
+func (t *bbOpeningTag) String() string {
+	str := t.Name
+	if len(t.Value) > 0 {
+		str += "=" + t.Value
 	}
-	for k, v := range t.args {
+	for k, v := range t.Args {
 		str += " " + k
 		if len(v) > 0 {
 			str += "=" + v
 		}
 	}
-	return "[" + str + "]"
-}
-
-func writeExpression(lex yyLexer, expr string) {
-	lex.(*lexer).buffer.WriteString(expr)
-}
-
-func (a *argument) reduceArguments(args map[string]string) {
-	args[a.arg.key] = a.arg.value
-	if a.others != nil {
-		a.others.reduceArguments(args)
-	}
-}
-
-func (a *argument) expand() map[string]string {
-	var args = make(map[string]string)
-	a.reduceArguments(args)
-	return args
+	return str
 }
