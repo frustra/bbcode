@@ -11,38 +11,45 @@ import (
 
 var prelexTests = map[string][]string{
 	``:                                                                    []string{},
-	`[url]a[/url]`:                                                        []string{`[url]`, `a`, `[/url]`},
-	`[img][/img]`:                                                         []string{`[img]`, `[/img]`},
-	`[img = foo]bar[/img]`:                                                []string{`[img=foo]`, `bar`, `[/img]`},
-	`[quote name=Someguy]hello[/quote]`:                                   []string{`[quote name=Someguy]`, `hello`, `[/quote]`},
-	`[center][b][color=#00BFFF][size=6]hello[/size][/color][/b][/center]`: []string{`[center]`, `[b]`, `[color=#00BFFF]`, `[size=6]`, `hello`, `[/size]`, `[/color]`, `[/b]`, `[/center]`},
-	`[b]`:               []string{`[b]`},
-	`blank[b][/b]`:      []string{`blank`, `[b]`, `[/b]`},
-	`[b][/b]blank`:      []string{`[b]`, `[/b]`, `blank`},
-	`[not a tag][/not]`: []string{`[not a tag]`, `[/not]`},
+	`[url]a[/url]`:                                                        []string{`<url>`, `a`, `</url>`},
+	`[img][/img]`:                                                         []string{`<img>`, `</img>`},
+	`[img = foo]bar[/img]`:                                                []string{`<img=foo>`, `bar`, `</img>`},
+	`[quote name=Someguy]hello[/quote]`:                                   []string{`<quote name=Someguy>`, `hello`, `</quote>`},
+	`[center][b][color=#00BFFF][size=6]hello[/size][/color][/b][/center]`: []string{`<center>`, `<b>`, `<color=#00BFFF>`, `<size=6>`, `hello`, `</size>`, `</color>`, `</b>`, `</center>`},
+	`[b]`:               []string{`<b>`},
+	`blank[b][/b]`:      []string{`blank`, `<b>`, `</b>`},
+	`[b][/b]blank`:      []string{`<b>`, `</b>`, `blank`},
+	`[not a tag][/not]`: []string{`<not a tag>`, `</not>`},
 
-	`[u][b]something[/b] then [b]something else[/b][/u]`: []string{`[u]`, `[b]`, `something`, `[/b]`, ` then `, `[b]`, `something else`, `[/b]`, `[/u]`},
+	`[u][b]something[/b] then [b]something else[/b][/u]`: []string{`<u>`, `<b>`, `something`, `</b>`, ` then `, `<b>`, `something else`, `</b>`, `</u>`},
 
-	"the quick brown [b][i]fox[/b][/i]\n[i]\n[b]hi[/b]][b][url=a[img]v[/img][/url][b]": []string{"the quick brown ", "[b]", "[i]", "fox", "[/b]", "[/i]", "\n", "[i]", "\n", "[b]", "hi", "[/b]", "]", "[b]", "[url=a", "[img]", "v", "[/img]", "[/url]", "[b]"},
-	"the quick brown[/b][b]hello[/b]":                                                  []string{"the quick brown", "[/b]", "[b]", "hello", "[/b]"},
-	"the quick brown[/b][/code]":                                                       []string{"the quick brown", "[/b]", "[/code]"},
+	"the quick brown [b][i]fox[/b][/i]\n[i]\n[b]hi[/b]][b][url=a[img]v[/img][/url][b]": []string{"the quick brown ", "<b>", "<i>", "fox", "</b>", "</i>", "\n", "<i>", "\n", "<b>", "hi", "</b>", "]", "<b>", "[url=a", "<img>", "v", "</img>", "</url>", "<b>"},
+	"the quick brown[/b][b]hello[/b]":                                                  []string{"the quick brown", "</b>", "<b>", "hello", "</b>"},
+	"the quick brown[/b][/code]":                                                       []string{"the quick brown", "</b>", "</code>"},
+	"[quote\n		name=xthexder\n		time=555555\n	]hello[/quote]": []string{`<quote name=xthexder time=555555>`, `hello`, `</quote>`},
+	"[q\nuot\ne\nna\nme\n=\nxthex\nder\n]hello[/quote]": []string{`<q uot e na me=xthex der>`, `hello`, `</quote>`},
 
-	`[ b][	i]the quick brown[/i][/b=hello]`: []string{`[b]`, `[i]`, `the quick brown`, `[/i]`, `[/b=hello]`},
-	`[b [herp@#$%]]the quick brown[/b]`: []string{`[b `, `[herp@#$%]`, `]the quick brown`, `[/b]`},
-	`[b=hello a=hi	q]the quick brown[/b]`: []string{`[b=hello a=hi q]`, `the quick brown`, `[/b]`},
-	`[b]hi[`: []string{`[b]`, `hi[`},
+	`[ b][	i]the quick brown[/i][/b=hello]`: []string{`<b>`, `<i>`, `the quick brown`, `</i>`, `</b=hello>`},
+	`[b [herp@#$%]]the quick brown[/b]`: []string{`[b `, `<herp@#$%>`, `]the quick brown`, `</b>`},
+	`[b=hello a=hi	q]the quick brown[/b]`: []string{`<b=hello a=hi q>`, `the quick brown`, `</b>`},
+	`[b]hi[`:                       []string{`<b>`, `hi`, `[`},
+	`[size=6 =hello]hi[/size]`:     []string{`<size=6 =hello>`, `hi`, `</size>`},
+	`[size=6 =hello =hi]hi[/size]`: []string{`<size=6 =hi>`, `hi`, `</size>`},
 
-	`[img = 'fo"o']bar[/img]`:                                                []string{`[img=fo"o]`, `bar`, `[/img]`},
-	`[img = "foo'"]bar[/img]`:                                                []string{`[img=foo']`, `bar`, `[/img]`},
-	`[img = "\"'foo"]bar[/img]`:                                              []string{`[img=\ 'foo"]`, `bar`, `[/img]`},
-	`[quote name='Someguy']hello[/quote]`:                                    []string{`[quote name=Someguy]`, `hello`, `[/quote]`},
-	`[center][b][color="#00BFFF"][size='6]hello[/size][/color][/b][/center]`: []string{`[center]`, `[b]`, `[color=#00BFFF]`, `[size=6]`, `hello`, `[/size]`, `[/color]`, `[/b]`, `[/center]`},
+	`[img = 'fo"o']bar[/img]`:                                                    []string{`<img=fo"o>`, `bar`, `</img>`},
+	`[img = "foo'"]bar[/img]`:                                                    []string{`<img=foo'>`, `bar`, `</img>`},
+	`[img = "\"'foo"]bar[/img]`:                                                  []string{`<img="'foo>`, `bar`, `</img>`},
+	`[img = "f\oo\]\'fo\\o"]bar[/img]`:                                           []string{`<img=foo]'fo\o>`, `bar`, `</img>`},
+	`[img = "foo\]'fo\n\"o"]bar[/img]`:                                           []string{"<img=foo]'fo\n\"o>", `bar`, `</img>`},
+	`[quote name='Someguy']hello[/quote]`:                                        []string{`<quote name=Someguy>`, `hello`, `</quote>`},
+	`[center][b][color="#00BFFF"][size='6]hello[/size][/color][/b][/center]`:     []string{`<center>`, `<b>`, `<color=#00BFFF>`, `[size='6]hello`, `</size>`, `</color>`, `</b>`, `</center>`},
+	"[center][b][color=\"#00BFFF\"][size='6]hello[/size]\n[/color][/b][/center]": []string{`<center>`, `<b>`, `<color=#00BFFF>`, `[size='6]hello`, `</size>`, "\n", `</color>`, `</b>`, `</center>`},
 }
 
-func TestPreLex(t *testing.T) {
+func TestLexer(t *testing.T) {
 	for in, expected := range prelexTests {
 		lexer := newLexer(in)
-		lexer.PreLex()
+		go lexer.runStateMachine()
 		ok, out := CheckResult(lexer, expected)
 		if !ok {
 			t.Errorf("Failed to prelex %s.\nExpected: %s, got: %s\n", in, PrintExpected(expected), PrintOutput(out))
@@ -71,9 +78,9 @@ func PrintOutput(out []*token) string {
 		case string:
 			result += t
 		case bbOpeningTag:
-			result += t.string()
+			result += "<" + t.string() + ">"
 		case bbClosingTag:
-			result += "[/" + t.name + "]"
+			result += "</" + t.name + ">"
 		default:
 			result += fmt.Sprintf("<%v>", t)
 		}
@@ -86,9 +93,6 @@ func CheckResult(l *lexer, b []string) (bool, []*token) {
 	out := make([]*token, 0)
 	good := true
 	for v := range l.tokens {
-		if v == nil {
-			break
-		}
 		out = append(out, v)
 		if i < len(b) && good {
 			switch t := v.value.(type) {
@@ -97,11 +101,11 @@ func CheckResult(l *lexer, b []string) (bool, []*token) {
 					good = false
 				}
 			case bbOpeningTag:
-				if t.string() != b[i] {
+				if "<"+t.string()+">" != b[i] {
 					good = false
 				}
 			case bbClosingTag:
-				if "[/"+t.name+"]" != b[i] {
+				if "</"+t.name+">" != b[i] {
 					good = false
 				}
 			default:

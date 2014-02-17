@@ -4,7 +4,10 @@
 
 package bbcode
 
-import "testing"
+import (
+	"math/rand"
+	"testing"
+)
 
 var basicTests = map[string]string{
 	``: ``,
@@ -99,7 +102,8 @@ var brokenTests = map[string]string{
 	"[ b][	i]the quick brown[/i][/b=hello]": `[b]<i>the quick brown</i>[/b=hello]`,
 	"[b [herp@#$%]]the quick brown[/b]": `<b>]the quick brown</b>`,
 	"[b=hello a=hi	q]the quick brown[/b]": `<b>the quick brown</b>`,
-	"[b]hi[": `[b]hi[`,
+	"[b]hi[":     `[b]hi[`,
+	"[b hi=derp": `[b]hi[`,
 }
 
 func TestBroken(t *testing.T) {
@@ -122,5 +126,32 @@ func TestSafeURL(t *testing.T) {
 		if result != out {
 			t.Errorf("Failed to sanitize %s.\nExpected: %s, got: %s", in, out, result)
 		}
+	}
+}
+
+var tokenParts = []string{
+	"[b]",
+	"[/b]",
+	"\n",
+	"b",
+	"url",
+	"derp",
+	"hi",
+	"[url=",
+	"=",
+	"[",
+	"[/",
+	"]",
+	" ",
+	" ",
+}
+
+func TestRandom(t *testing.T) {
+	for i := 0; i < 1000; i++ {
+		in := ""
+		for j := 0; j < 100; j++ {
+			in += tokenParts[rand.Int()%len(tokenParts)]
+		}
+		Compile(in)
 	}
 }

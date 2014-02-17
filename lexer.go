@@ -6,11 +6,10 @@ package bbcode
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
 	"regexp"
-	"strings"
 )
+
+type stateFn func(*lexer) stateFn
 
 type token struct {
 	id    int
@@ -21,6 +20,17 @@ type token struct {
 type lexer struct {
 	input  string
 	tokens chan *token
+
+	start int
+	end   int
+	pos   int
+
+	tagName     string
+	tagValue    string
+	tagTmpName  string
+	tagTmpValue string
+	tagArgs     map[string]string
+
 	buffer bytes.Buffer
 }
 
@@ -47,50 +57,217 @@ func init() {
 func newLexer(str string) *lexer {
 	return &lexer{
 		input:  str,
-		tokens: make(chan *token, 1000),
+		tokens: make(chan *token),
 	}
 }
 
-func (l *lexer) PreLex() {
-	for len(l.input) > 0 {
-		i := strings.IndexRune(l.input, '[')
-		if i < 0 {
-			l.tokens <- &token{TEXT, l.input}
-			l.input = ""
-			continue
+func (l *lexer) emit(id int, value interface{}) {
+	if l.pos > 0 {
+		// fmt.Println(l.input)
+		// fmt.Printf("Emit %s: %+v\n", yyToknames[id-TEXT], value)
+		l.tokens <- &token{id, value}
+		l.input = l.input[l.pos:]
+		l.pos = 0
+	}
+}
+
+func lexText(l *lexer) stateFn {
+	for l.pos < len(l.input) {
+		if l.input[l.pos] == '[' {
+			l.emit(TEXT, l.input[:l.pos])
+			return lexOpenBracket
 		}
-		j := strings.IndexAny(l.input[i+1:], "[]")
-		if j < 0 {
-			l.tokens <- &token{TEXT, l.input}
-			l.input = ""
-			continue
-		}
-		if l.input[i+j+1] == ']' {
-			if i == 0 {
-				parsed := parseBBCodeTag(l.input[0 : j+2])
-				switch t := parsed.(type) {
-				case nil:
-				case string:
-					l.tokens <- &token{TEXT, t}
-				case bbOpeningTag:
-					l.tokens <- &token{OPENING, t}
-				case bbClosingTag:
-					l.tokens <- &token{CLOSING, t}
-				default:
-					fmt.Println("Unknown type back from lexer:", t)
-				}
-				l.input = l.input[j+2:]
+		l.pos++
+	}
+	l.emit(TEXT, l.input)
+	return nil
+}
+
+func lexOpenBracket(l *lexer) stateFn {
+	l.pos++
+	closingTag := false
+	for l.pos < len(l.input) {
+		if l.input[l.pos] == '\n' {
+			return lexText
+		} else if l.input[l.pos] == '[' {
+			l.emit(TEXT, l.input[:l.pos])
+			return lexOpenBracket
+		} else if l.input[l.pos] == ']' {
+			return lexText
+		} else if l.input[l.pos] == '/' && !closingTag {
+			closingTag = true
+		} else if l.input[l.pos] != ' ' && l.input[l.pos] != '\t' {
+			if closingTag {
+				return lexClosingTag
 			} else {
-				l.tokens <- &token{TEXT, l.input[0:i]}
-				l.input = l.input[i:]
+				l.tagName = ""
+				l.tagValue = ""
+				l.tagArgs = make(map[string]string)
+				return lexTagName
 			}
+		}
+		l.pos++
+	}
+	l.emit(TEXT, l.input)
+	return nil
+}
+
+func lexClosingTag(l *lexer) stateFn {
+	whiteSpace := false
+	l.start = l.pos
+	l.end = l.pos
+	for l.pos < len(l.input) {
+		if l.input[l.pos] == '\n' {
+			return lexText
+		} else if l.input[l.pos] == '[' {
+			l.emit(TEXT, l.input[:l.pos])
+			return lexOpenBracket
+		} else if l.input[l.pos] == ']' {
+			l.pos++
+			l.emit(CLOSING, bbClosingTag{l.input[l.start:l.end], l.input[:l.pos]})
+			return lexText
+		} else if l.input[l.pos] == ' ' || l.input[l.pos] == '\t' {
+			whiteSpace = true
+		} else if whiteSpace {
+			return lexText
 		} else {
-			l.tokens <- &token{TEXT, l.input[0 : j+1]}
-			l.input = l.input[j+1:]
+			l.end++
+		}
+		l.pos++
+	}
+	l.emit(TEXT, l.input)
+	return nil
+}
+
+func lexTagName(l *lexer) stateFn {
+	l.tagTmpValue = ""
+	whiteSpace := false
+	l.start = l.pos
+	l.end = l.pos
+	for l.pos < len(l.input) {
+		if l.input[l.pos] == '[' {
+			l.emit(TEXT, l.input[:l.pos])
+			return lexOpenBracket
+		} else if l.input[l.pos] == ']' {
+			l.tagTmpName = l.input[l.start:l.end]
+			return lexTagArgs
+		} else if l.input[l.pos] == '=' {
+			l.tagTmpName = l.input[l.start:l.end]
+			return lexTagValue
+		} else if l.input[l.pos] == ' ' || l.input[l.pos] == '\t' || l.input[l.pos] == '\n' {
+			whiteSpace = true
+		} else if whiteSpace {
+			l.tagTmpName = l.input[l.start:l.end]
+			return lexTagArgs
+		} else {
+			l.end++
+		}
+		l.pos++
+	}
+	l.emit(TEXT, l.input)
+	return nil
+}
+
+func lexTagValue(l *lexer) stateFn {
+	l.pos++
+	for l.pos < len(l.input) {
+		if l.input[l.pos] == ' ' || l.input[l.pos] == '\t' || l.input[l.pos] == '\n' {
+			l.pos++
+		} else if l.input[l.pos] == '"' || l.input[l.pos] == '\'' {
+			return lexQuotedValue
+		} else {
+			break
 		}
 	}
-	l.tokens <- nil
+	l.start = l.pos
+	l.end = l.pos
+	for l.pos < len(l.input) {
+		if l.input[l.pos] == '[' {
+			l.emit(TEXT, l.input[:l.pos])
+			return lexOpenBracket
+		} else if l.input[l.pos] == ']' {
+			l.tagTmpValue = l.input[l.start:l.end]
+			return lexTagArgs
+		} else if l.input[l.pos] == ' ' || l.input[l.pos] == '\t' || l.input[l.pos] == '\n' {
+			l.tagTmpValue = l.input[l.start:l.end]
+			return lexTagArgs
+		} else {
+			l.end++
+		}
+		l.pos++
+	}
+	l.emit(TEXT, l.input)
+	return nil
+}
+
+func lexQuotedValue(l *lexer) stateFn {
+	quoteChar := l.input[l.pos]
+	l.pos++
+	l.start = l.pos
+	var buf bytes.Buffer
+	escape := false
+	for l.pos < len(l.input) {
+		if escape {
+			if l.input[l.pos] == 'n' {
+				buf.WriteRune('\n')
+			} else {
+				buf.WriteRune(rune(l.input[l.pos]))
+			}
+			escape = false
+		} else if l.input[l.pos] == '\\' {
+			escape = true
+		} else if l.input[l.pos] == '\n' {
+			l.pos = l.start
+			return lexText
+		} else if l.input[l.pos] == quoteChar {
+			l.pos++
+			l.tagTmpValue = buf.String()
+			return lexTagArgs
+		} else {
+			buf.WriteRune(rune(l.input[l.pos]))
+		}
+		l.pos++
+	}
+	l.pos = l.start
+	return lexText
+}
+
+func lexTagArgs(l *lexer) stateFn {
+	if len(l.tagName) > 0 {
+		l.tagArgs[l.tagTmpName] = l.tagTmpValue
+	} else {
+		l.tagName = l.tagTmpName
+		l.tagValue = l.tagTmpValue
+	}
+	for l.pos < len(l.input) {
+		if l.input[l.pos] == ' ' || l.input[l.pos] == '\t' || l.input[l.pos] == '\n' {
+			l.pos++
+		} else if l.input[l.pos] == '[' {
+			l.emit(TEXT, l.input[:l.pos])
+			return lexOpenBracket
+		} else if l.input[l.pos] == ']' {
+			l.pos++
+			l.emit(OPENING, bbOpeningTag{l.tagName, l.tagValue, l.tagArgs, l.input[:l.pos]})
+			return lexText
+		} else {
+			l.tagTmpName = ""
+			return lexTagName
+		}
+	}
+	l.emit(TEXT, l.input)
+	return nil
+}
+
+func (l *lexer) runStateMachine() {
+	for state := lexText; state != nil; {
+		state = state(l)
+	}
 	close(l.tokens)
+}
+
+func (l *lexer) Run() {
+	go l.runStateMachine()
+	yyParse(l)
 }
 
 func (l *lexer) Lex(lval *yySymType) int {
@@ -111,5 +288,5 @@ func (l *lexer) Lex(lval *yySymType) int {
 }
 
 func (l *lexer) Error(s string) {
-	panic(errors.New(s))
+	panic(s)
 }

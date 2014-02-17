@@ -5,16 +5,10 @@
 // Package bbcode implements a parser and HTML generator for BBCode.
 package bbcode
 
-import (
-	"fmt"
-	"strings"
-)
-
 // Compile transforms a string of BBCode to HTML
 func Compile(str string) string {
 	lex := newLexer(str)
-	lex.PreLex()
-	yyParse(lex)
+	lex.Run()
 	return lex.buffer.String()
 }
 
@@ -31,69 +25,12 @@ type bbOpeningTag struct {
 	name  string
 	value string
 	args  map[string]string
+	raw   string
 }
 
 type bbClosingTag struct {
 	name string
-}
-
-func parseBBCodeTag(tag string) interface{} {
-	if len(tag) <= 0 || tag[0] != '[' || tag[len(tag)-1] != ']' {
-		fmt.Println("Halp, what's going on? %s", tag)
-		return nil
-	}
-	str := strings.Trim(tag[1:len(tag)-1], " \t")
-	if len(str) <= 0 {
-		return tag
-	}
-	if str[0] == '/' {
-		return bbClosingTag{str[1:]}
-	} else {
-		var out bbOpeningTag
-		out.args = make(map[string]string)
-		nameSet := false
-		for len(str) > 0 {
-			name := ""
-			value := ""
-			i := strings.IndexAny(str, "= \t")
-			if i < 0 {
-				i = len(str)
-			}
-			name = str[0:i]
-			str = strings.TrimLeft(str[i:], " \t")
-			if len(str) > 0 && str[0] == '=' {
-				str = strings.TrimLeft(str[1:], " \t")
-				if len(str) > 0 && str[0] == '\'' || str[0] == '"' {
-					i = strings.IndexRune(str[1:], rune(str[0]))
-					if i < 0 {
-						value = str[1:]
-						str = ""
-					} else {
-						value = str[1 : i+1]
-						str = strings.TrimLeft(str[i+2:], " \t")
-					}
-				} else {
-					i = strings.IndexAny(str, " \t")
-					if i < 0 {
-						value = str
-						str = ""
-					} else {
-						value = str[0:i]
-						str = strings.TrimLeft(str[i:], " \t")
-					}
-				}
-			}
-			if nameSet {
-				out.args[name] = value
-			} else {
-				out.name = name
-				out.value = value
-				nameSet = true
-			}
-		}
-		return out
-	}
-	return tag
+	raw  string
 }
 
 func (t *bbOpeningTag) string() string {
@@ -107,7 +44,7 @@ func (t *bbOpeningTag) string() string {
 			str += "=" + v
 		}
 	}
-	return "[" + str + "]"
+	return str
 }
 
 func writeExpression(lex yyLexer, expr string) {
