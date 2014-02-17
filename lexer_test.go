@@ -68,7 +68,7 @@ func PrintExpected(expected []string) string {
 	return result
 }
 
-func PrintOutput(out []*token) string {
+func PrintOutput(out []Token) string {
 	result := ""
 	for i, v := range out {
 		if i > 0 {
@@ -82,15 +82,15 @@ func PrintOutput(out []*token) string {
 		case bbClosingTag:
 			result += "</" + t.name + ">"
 		default:
-			result += fmt.Sprintf("<%v>", t)
+			result += fmt.Sprintf("{%v}", t)
 		}
 	}
 	return result
 }
 
-func CheckResult(l *lexer, b []string) (bool, []*token) {
+func CheckResult(l *lexer, b []string) (bool, []Token) {
 	i := 0
-	out := make([]*token, 0)
+	out := make([]Token, 0)
 	good := true
 	for v := range l.tokens {
 		out = append(out, v)

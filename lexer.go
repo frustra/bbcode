@@ -4,19 +4,19 @@
 
 package bbcode
 
-import "bytes"
+import (
+	"bytes"
+	"strings"
+)
 
-type stateFn func(*lexer) stateFn
-
-type token struct {
-	id    int
+type Token struct {
+	id    string
 	value interface{}
 }
 
-// Abuse of the generated types to keep parser state in the lexer
 type lexer struct {
 	input  string
-	tokens chan *token
+	tokens chan Token
 
 	start int
 	end   int
@@ -27,28 +27,45 @@ type lexer struct {
 	tagTmpName  string
 	tagTmpValue string
 	tagArgs     map[string]string
-
-	buffer bytes.Buffer
 }
 
-var tags = []string{"url", "img", "b", "i", "u", "strike", "center", "color", "size", "quote", "code", "spoiler", "media"}
+const (
+	TEXT        = "text"
+	OPENING_TAG = "opening"
+	CLOSING_TAG = "closing"
+)
 
 func newLexer(str string) *lexer {
 	return &lexer{
 		input:  str,
-		tokens: make(chan *token),
+		tokens: make(chan Token),
 	}
 }
 
-func (l *lexer) emit(id int, value interface{}) {
+func Lex(str string) chan Token {
+	lex := newLexer(str)
+	go lex.runStateMachine()
+	return lex.tokens
+}
+
+func (l *lexer) runStateMachine() {
+	for state := lexText; state != nil; {
+		state = state(l)
+	}
+	close(l.tokens)
+}
+
+func (l *lexer) emit(id string, value interface{}) {
 	if l.pos > 0 {
 		// fmt.Println(l.input)
-		// fmt.Printf("Emit %s: %+v\n", yyToknames[id-TEXT], value)
-		l.tokens <- &token{id, value}
+		// fmt.Printf("Emit %s: %+v\n", id, value)
+		l.tokens <- Token{id, value}
 		l.input = l.input[l.pos:]
 		l.pos = 0
 	}
 }
+
+type stateFn func(*lexer) stateFn
 
 func lexText(l *lexer) stateFn {
 	for l.pos < len(l.input) {
@@ -99,7 +116,7 @@ func lexClosingTag(l *lexer) stateFn {
 			return lexText
 		case ']':
 			l.pos++
-			l.emit(CLOSING, bbClosingTag{l.input[l.start:l.end], l.input[:l.pos]})
+			l.emit(CLOSING_TAG, bbClosingTag{strings.ToLower(l.input[l.start:l.end]), l.input[:l.pos]})
 			return lexText
 		case ' ', '\t', '\n':
 			whiteSpace = true
@@ -218,7 +235,7 @@ func lexQuotedValue(l *lexer) stateFn {
 
 func lexTagArgs(l *lexer) stateFn {
 	if len(l.tagName) > 0 {
-		l.tagArgs[l.tagTmpName] = l.tagTmpValue
+		l.tagArgs[strings.ToLower(l.tagTmpName)] = l.tagTmpValue
 	} else {
 		l.tagName = l.tagTmpName
 		l.tagValue = l.tagTmpValue
@@ -229,7 +246,7 @@ func lexTagArgs(l *lexer) stateFn {
 			return lexText
 		case ']':
 			l.pos++
-			l.emit(OPENING, bbOpeningTag{l.tagName, l.tagValue, l.tagArgs, l.input[:l.pos]})
+			l.emit(OPENING_TAG, bbOpeningTag{strings.ToLower(l.tagName), l.tagValue, l.tagArgs, l.input[:l.pos]})
 			return lexText
 		case ' ', '\t', '\n':
 			l.pos++
@@ -240,37 +257,4 @@ func lexTagArgs(l *lexer) stateFn {
 	}
 	l.emit(TEXT, l.input)
 	return nil
-}
-
-func (l *lexer) runStateMachine() {
-	for state := lexText; state != nil; {
-		state = state(l)
-	}
-	close(l.tokens)
-}
-
-func (l *lexer) Run() {
-	go l.runStateMachine()
-	yyParse(l)
-}
-
-func (l *lexer) Lex(lval *yySymType) int {
-	token := <-l.tokens
-	if token != nil {
-		switch t := token.value.(type) {
-		case string:
-			lval.str = t
-		case bbOpeningTag:
-			lval.openingTag = t
-		case bbClosingTag:
-			lval.closingTag = t
-		}
-		return token.id
-	} else {
-		return 0
-	}
-}
-
-func (l *lexer) Error(s string) {
-	panic(s)
 }
