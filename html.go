@@ -8,250 +8,78 @@ import (
 	"fmt"
 	"html"
 	"net/url"
-	"regexp"
-	"strconv"
 	"strings"
 )
 
-type htmlTag struct {
-	name     string
-	value    string
-	attrs    map[string]string
-	children []*htmlTag
+// HTMLTag represents a DOM node.
+type HTMLTag struct {
+	Name     string
+	Value    string
+	Attrs    map[string]string
+	Children []*HTMLTag
 }
 
-func newHtmlTag(value string) *htmlTag {
-	return &htmlTag{
-		value:    value,
-		attrs:    make(map[string]string),
-		children: make([]*htmlTag, 0),
+// NewHTMLTag creates a new HTMLTag with string contents specified by value.
+func NewHTMLTag(value string) *HTMLTag {
+	return &HTMLTag{
+		Value:    value,
+		Attrs:    make(map[string]string),
+		Children: make([]*HTMLTag, 0),
 	}
 }
 
-func (t *htmlTag) string() string {
+func (t *HTMLTag) String() string {
 	var value string
-	if t.value != "" {
-		value = sanitize(t.value)
+	if t.Value != "" {
+		value = sanitize(t.Value)
 	}
 	var attrString string
-	for key, value := range t.attrs {
+	for key, value := range t.Attrs {
 		attrString = fmt.Sprintf(`%s %s="%s"`, attrString, key, escapeQuotes(sanitize(value)))
 	}
-	if len(t.children) > 0 {
+	if len(t.Children) > 0 {
 		var childrenString string
-		for _, child := range t.children {
-			childrenString = fmt.Sprint(childrenString, child.string())
+		for _, child := range t.Children {
+			childrenString = fmt.Sprint(childrenString, child.String())
 		}
-		if t.name != "" {
-			return fmt.Sprintf(`%s<%s%s>%s</%s>`, value, t.name, attrString, childrenString, t.name)
+		if t.Name != "" {
+			return fmt.Sprintf(`%s<%s%s>%s</%s>`, value, t.Name, attrString, childrenString, t.Name)
 		} else {
 			return fmt.Sprint(value, childrenString)
 		}
-	} else if t.name != "" {
-		return fmt.Sprintf(`%s<%s%s>`, value, t.name, attrString)
+	} else if t.Name != "" {
+		return fmt.Sprintf(`%s<%s%s>`, value, t.Name, attrString)
 	} else {
 		return value
 	}
 }
 
-func (t *htmlTag) appendChild(child *htmlTag) *htmlTag {
+func (t *HTMLTag) AppendChild(child *HTMLTag) *HTMLTag {
 	if child == nil {
-		t.children = append(t.children, newHtmlTag(""))
+		t.Children = append(t.Children, NewHTMLTag(""))
 	} else {
-		t.children = append(t.children, child)
+		t.Children = append(t.Children, child)
 	}
 	return t
 }
 
-var youtubeRegex = regexp.MustCompile(`(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?([a-zA-Z0-9]+)`)
-
-// compile transforms a tag and subexpression into an HTML string.
-// It is only used by the generated parser code.
-func compile(node *BBCodeNode) *htmlTag {
-	var out = newHtmlTag("")
-	if node.id == TEXT {
-		out.value = node.value.(string)
-		insertNewlines(out)
-		for _, child := range node.Children {
-			out.appendChild(compile(child))
-		}
-	} else if node.id == CLOSING_TAG {
-		out.value = node.value.(bbClosingTag).raw
-		for _, child := range node.Children {
-			out.appendChild(compile(child))
-		}
-	} else {
-		in := node.value.(bbOpeningTag)
-		var expr *htmlTag
-		if len(node.Children) == 1 {
-			expr = compile(node.Children[0])
-		} else if len(node.Children) > 1 {
-			expr = newHtmlTag("")
-			for _, child := range node.Children {
-				expr.appendChild(compile(child))
-			}
-		}
-
-		switch in.name {
-		case "url":
-			out.name = "a"
-			if in.value == "" {
-				if expr != nil {
-					out.attrs["href"] = safeURL(expr.value)
-				} else {
-					out.attrs["href"] = ""
-				}
-			} else {
-				out.attrs["href"] = safeURL(in.value)
-			}
-			out.appendChild(expr)
-		case "img":
-			out.name = "img"
-			if in.value == "" {
-				if expr != nil {
-					out.attrs["src"] = safeURL(expr.value)
-				} else {
-					out.attrs["src"] = ""
-				}
-			} else {
-				out.attrs["src"] = safeURL(in.value)
-				if expr != nil {
-					out.attrs["alt"] = expr.value
-				}
-			}
-		case "media":
-			if expr == nil {
-				out.value = "Embedded video"
-			} else {
-				out.name = "div"
-				out.attrs["class"] = "embedded-video"
-
-				obj := newHtmlTag("Embedded video")
-				out.appendChild(obj)
-
-				matches := youtubeRegex.FindStringSubmatch(expr.value)
-				if matches != nil {
-					obj = newHtmlTag("")
-					obj.name = "object"
-					obj.attrs["width"] = "620"
-					obj.attrs["height"] = "349"
-
-					params := map[string]string{
-						"movie":             fmt.Sprintf("//www.youtube.com/v/%s?version=3", matches[1]),
-						"wmode":             "transparent",
-						"allowFullScreen":   "true",
-						"allowscriptaccess": "always",
-					}
-
-					embed := newHtmlTag("")
-					embed.name = "embed"
-					embed.attrs["type"] = "application/x-shockwave-flash"
-					embed.attrs["width"] = "620"
-					embed.attrs["height"] = "349"
-					for name, value := range params {
-						param := newHtmlTag("")
-						param.name = "param"
-						param.attrs["name"] = name
-						param.attrs["value"] = value
-						obj.appendChild(param)
-
-						if name == "movie" {
-							name = "src"
-						}
-						embed.attrs[name] = value
-					}
-					obj.appendChild(embed)
-					out.appendChild(obj)
-				}
-			}
-		case "center":
-			out.name = "div"
-			out.attrs["style"] = "text-align: center;"
-			out.appendChild(expr)
-		case "color":
-			return expr
-		case "size":
-			out.name = "span"
-			if size, err := strconv.Atoi(in.value); err == nil {
-				out.attrs["style"] = fmt.Sprintf("font-size: %dpx;", size*4)
-			}
-			out.appendChild(expr)
-		case "spoiler":
-			out.name = "div"
-			out.attrs["class"] = "expandable collapsed"
-			out.appendChild(expr)
-		case "quote":
-			out.name = "blockquote"
-			who := ""
-			if name, ok := in.args["name"]; ok && name != "" {
-				who = name
-			} else {
-				who = in.value
-			}
-			cite := newHtmlTag("")
-			cite.name = "cite"
-			if who != "" {
-				cite.appendChild(newHtmlTag(who + " said:"))
-			} else {
-				cite.appendChild(newHtmlTag("Quote"))
-			}
-			out.appendChild(cite)
-			out.appendChild(expr)
-		case "strike":
-			out.name = "s"
-			out.appendChild(expr)
-		case "code":
-			out.name = "code"
-			for _, child := range node.Children {
-				out.appendChild(compileRaw(child))
-			}
-		case "i", "b", "u":
-			out.name = in.name
-			out.appendChild(expr)
-		default:
-			out.value = in.raw
-			insertNewlines(out)
-			out.appendChild(expr).appendChild(newHtmlTag("[/" + in.name + "]"))
-		}
-	}
-	return out
-}
-
-func insertNewlines(out *htmlTag) {
-	if strings.ContainsRune(out.value, '\n') {
-		parts := strings.Split(out.value, "\n")
+func insertNewlines(out *HTMLTag) {
+	if strings.ContainsRune(out.Value, '\n') {
+		parts := strings.Split(out.Value, "\n")
 		for i, part := range parts {
 			if i == 0 {
-				out.value = parts[i]
+				out.Value = parts[i]
 			} else {
-				out.appendChild(newline()).appendChild(newHtmlTag(part))
+				out.AppendChild(NewlineTag()).AppendChild(NewHTMLTag(part))
 			}
 		}
 	}
 }
 
-func compileRaw(in *BBCodeNode) *htmlTag {
-	out := newHtmlTag("")
-	if in.id == TEXT {
-		out.value = in.value.(string)
-	} else if in.id == OPENING_TAG {
-		out.value = in.value.(bbOpeningTag).raw
-	} else if in.id == CLOSING_TAG {
-		out.value = in.value.(bbClosingTag).raw
-	}
-	insertNewlines(out)
-	for _, child := range in.Children {
-		out.appendChild(compileRaw(child))
-	}
-	if in.id == OPENING_TAG {
-		out.appendChild(newHtmlTag("[/" + in.value.(bbOpeningTag).name + "]"))
-	}
-	return out
-}
-
-func newline() *htmlTag {
-	var out = newHtmlTag("")
-	out.name = "br"
+// Returns a new HTMLTag representing a line break
+func NewlineTag() *HTMLTag {
+	var out = NewHTMLTag("")
+	out.Name = "br"
 	return out
 }
 

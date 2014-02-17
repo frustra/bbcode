@@ -11,21 +11,21 @@ type BBCodeNode struct {
 }
 
 func (n *BBCodeNode) appendChild(t Token) *BBCodeNode {
-	if t.id == CLOSING_TAG {
-		if n.Parent != nil && n.id == OPENING_TAG && n.value.(bbOpeningTag).name == t.value.(bbClosingTag).name {
+	if t.ID == CLOSING_TAG {
+		if n.Parent != nil && n.ID == OPENING_TAG && n.Value.(bbOpeningTag).Name == t.Value.(bbClosingTag).Name {
 			return n.Parent
 		}
 	}
 
 	// Join consecutive TEXT tokens
-	if len(n.Children) == 0 && t.id == TEXT && n.id == TEXT {
-		n.value = n.value.(string) + t.value.(string)
+	if len(n.Children) == 0 && t.ID == TEXT && n.ID == TEXT {
+		n.Value = n.Value.(string) + t.Value.(string)
 		return n
 	}
 
 	node := &BBCodeNode{t, n, make([]*BBCodeNode, 0)}
 	n.Children = append(n.Children, node)
-	if t.id == OPENING_TAG {
+	if t.ID == OPENING_TAG {
 		return node
 	} else {
 		return n

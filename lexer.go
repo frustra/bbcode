@@ -10,8 +10,8 @@ import (
 )
 
 type Token struct {
-	id    string
-	value interface{}
+	ID    string
+	Value interface{}
 }
 
 type lexer struct {
