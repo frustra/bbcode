@@ -8,15 +8,15 @@ type BBCodeNode struct {
 	Token
 	Parent     *BBCodeNode
 	Children   []*BBCodeNode
-	ClosingTag *bbClosingTag
+	ClosingTag *BBClosingTag
 }
 
 func (n *BBCodeNode) appendChild(t Token) *BBCodeNode {
 	if t.ID == CLOSING_TAG {
 		curr := n
-		closing := t.Value.(bbClosingTag)
+		closing := t.Value.(BBClosingTag)
 		for curr.Parent != nil {
-			if curr.ID == OPENING_TAG && curr.Value.(bbOpeningTag).Name == closing.Name {
+			if curr.ID == OPENING_TAG && curr.Value.(BBOpeningTag).Name == closing.Name {
 				curr.ClosingTag = &closing
 				return curr.Parent
 			}

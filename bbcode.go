@@ -18,19 +18,19 @@ func CompileCustom(str string, compiler Compiler) string {
 	return compiler.Compile(tree).String()
 }
 
-type bbOpeningTag struct {
+type BBOpeningTag struct {
 	Name  string
 	Value string
 	Args  map[string]string
 	Raw   string
 }
 
-type bbClosingTag struct {
+type BBClosingTag struct {
 	Name string
 	Raw  string
 }
 
-func (t *bbOpeningTag) String() string {
+func (t *BBOpeningTag) String() string {
 	str := t.Name
 	if len(t.Value) > 0 {
 		str += "=" + t.Value

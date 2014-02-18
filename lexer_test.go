@@ -77,9 +77,9 @@ func PrintOutput(out []Token) string {
 		switch t := v.Value.(type) {
 		case string:
 			result += t
-		case bbOpeningTag:
+		case BBOpeningTag:
 			result += "<" + t.String() + ">"
-		case bbClosingTag:
+		case BBClosingTag:
 			result += "</" + t.Name + ">"
 		default:
 			result += fmt.Sprintf("{%v}", t)
@@ -100,11 +100,11 @@ func CheckResult(l *lexer, b []string) (bool, []Token) {
 				if t != b[i] {
 					good = false
 				}
-			case bbOpeningTag:
+			case BBOpeningTag:
 				if "<"+t.String()+">" != b[i] {
 					good = false
 				}
-			case bbClosingTag:
+			case BBClosingTag:
 				if "</"+t.Name+">" != b[i] {
 					good = false
 				}

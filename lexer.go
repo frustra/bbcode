@@ -116,7 +116,7 @@ func lexClosingTag(l *lexer) stateFn {
 			return lexText
 		case ']':
 			l.pos++
-			l.emit(CLOSING_TAG, bbClosingTag{strings.ToLower(l.input[l.start:l.end]), l.input[:l.pos]})
+			l.emit(CLOSING_TAG, BBClosingTag{strings.ToLower(l.input[l.start:l.end]), l.input[:l.pos]})
 			return lexText
 		case ' ', '\t', '\n':
 			whiteSpace = true
@@ -246,7 +246,7 @@ func lexTagArgs(l *lexer) stateFn {
 			return lexText
 		case ']':
 			l.pos++
-			l.emit(OPENING_TAG, bbOpeningTag{strings.ToLower(l.tagName), l.tagValue, l.tagArgs, l.input[:l.pos]})
+			l.emit(OPENING_TAG, BBOpeningTag{strings.ToLower(l.tagName), l.tagValue, l.tagArgs, l.input[:l.pos]})
 			return lexText
 		case ' ', '\t', '\n':
 			l.pos++

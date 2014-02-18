@@ -37,18 +37,18 @@ func (c DefaultCompiler) Compile(node *BBCodeNode) *HTMLTag {
 		}
 	} else if node.ID == CLOSING_TAG {
 		if !c.IgnoreUnmatchedClosingTags {
-			out.Value = node.Value.(bbClosingTag).Raw
+			out.Value = node.Value.(BBClosingTag).Raw
 		}
 		for _, child := range node.Children {
 			out.AppendChild(c.Compile(child))
 		}
 	} else if node.ClosingTag == nil && !c.AutoCloseTags {
-		out.Value = node.Value.(bbOpeningTag).Raw
+		out.Value = node.Value.(BBOpeningTag).Raw
 		for _, child := range node.Children {
 			out.AppendChild(c.Compile(child))
 		}
 	} else {
-		in := node.Value.(bbOpeningTag)
+		in := node.Value.(BBOpeningTag)
 		var expr *HTMLTag
 		if len(node.Children) == 1 {
 			expr = c.Compile(node.Children[0])
@@ -189,16 +189,16 @@ func (c DefaultCompiler) CompileRaw(in *BBCodeNode) *HTMLTag {
 	if in.ID == TEXT {
 		out.Value = in.Value.(string)
 	} else if in.ID == OPENING_TAG {
-		out.Value = in.Value.(bbOpeningTag).Raw
+		out.Value = in.Value.(BBOpeningTag).Raw
 	} else if in.ID == CLOSING_TAG {
-		out.Value = in.Value.(bbClosingTag).Raw
+		out.Value = in.Value.(BBClosingTag).Raw
 	}
 	insertNewlines(out)
 	for _, child := range in.Children {
 		out.AppendChild(c.CompileRaw(child))
 	}
 	if in.ID == OPENING_TAG {
-		out.AppendChild(NewHTMLTag("[/" + in.Value.(bbOpeningTag).Name + "]"))
+		out.AppendChild(NewHTMLTag("[/" + in.Value.(BBOpeningTag).Name + "]"))
 	}
 	return out
 }
