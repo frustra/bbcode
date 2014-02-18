@@ -13,10 +13,10 @@ var basicTests = map[string]string{
 	`[img][/img]`:                   `<img src="">`,
 
 	`[url=http://example.com]example[/url]`:  `<a href="http://example.com">example</a>`,
-	`[img=http://example.com]alt text[/img]`: `<img src="http://example.com" alt="alt text">`,
+	`[img=http://example.com]alt text[/img]`: `<img src="http://example.com" alt="alt text" title="alt text">`,
 	`[img=http://example.com][/img]`:         `<img src="http://example.com">`,
 
-	`[img = foo]bar[/img]`: `<img src="foo" alt="bar">`,
+	`[img = foo]bar[/img]`: `<img src="foo" alt="bar" title="bar">`,
 
 	`[B]bold[/b]`:                    `<b>bold</b>`,
 	`[i]italic[/i]`:                  `<i>italic</i>`,
@@ -43,8 +43,9 @@ var basicTests = map[string]string{
 }
 
 func TestCompile(t *testing.T) {
+	c := NewCompiler(false, false)
 	for in, out := range basicTests {
-		result := Compile(in)
+		result := c.Compile(in)
 		if result != out {
 			t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", in, out, result)
 		}
@@ -56,14 +57,15 @@ var sanitizationTests = map[string]string{
 	`[url]<script>[/url]`: `<a href="%3Cscript%3E">&lt;script&gt;</a>`,
 
 	`[url=<script>]<script>[/url]`: `<a href="%3Cscript%3E">&lt;script&gt;</a>`,
-	`[img=<script>]<script>[/img]`: `<img src="%3Cscript%3E" alt="&lt;script&gt;">`,
+	`[img=<script>]<script>[/img]`: `<img src="%3Cscript%3E" alt="&lt;script&gt;" title="&lt;script&gt;">`,
 
 	`[url=http://a.b/z?\]link[/url]`: `<a href="http://a.b/z?%5C">link</a>`,
 }
 
 func TestSanitization(t *testing.T) {
+	c := NewCompiler(false, false)
 	for in, out := range sanitizationTests {
-		result := Compile(in)
+		result := c.Compile(in)
 		if result != out {
 			t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", in, out, result)
 		}
@@ -76,15 +78,17 @@ var fullTestInput = `the quick brown [b]fox[/b]:
 var fullTestOutput = `the quick brown <b>fox</b>:<br><a href="http://example"><img src="http://example.png"></a>`
 
 func TestFull(t *testing.T) {
-	result := Compile(fullTestInput)
+	c := NewCompiler(false, false)
+	result := c.Compile(fullTestInput)
 	if result != fullTestOutput {
 		t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", fullTestInput, fullTestOutput, result)
 	}
 }
 
 func BenchmarkFull(b *testing.B) {
+	c := NewCompiler(false, false)
 	for i := 0; i < b.N; i++ {
-		Compile(fullTestInput)
+		c.Compile(fullTestInput)
 	}
 }
 
@@ -104,8 +108,9 @@ var brokenTests = map[string]string{
 }
 
 func TestBroken(t *testing.T) {
+	c := NewCompiler(false, false)
 	for in, out := range brokenTests {
-		result := Compile(in)
+		result := c.Compile(in)
 		if result != out {
 			t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", in, out, result)
 		}
@@ -114,23 +119,21 @@ func TestBroken(t *testing.T) {
 
 var customTests = map[string]string{
 	`[img]//foo/bar.png[/img]`: `<img src="//custom.png">`,
+	`[url]//foo/bar.png[/url]`: `[url]//foo/bar.png[/url]`,
 }
 
-type testCustomCompiler struct {
-	DefaultCompiler
-}
-
-func (c testCustomCompiler) Compile(node *BBCodeNode) *HTMLTag {
-	tag := c.DefaultCompiler.Compile(node)
-	if tag.Name == "img" {
-		tag.Value = "//custom.png"
-	}
-	return tag
+func compileImg(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
+	out, appendExpr := DefaultTagCompilers["img"](node, in)
+	out.Attrs["src"] = "//custom.png"
+	return out, appendExpr
 }
 
 func TestCompileCustom(t *testing.T) {
-	for in, out := range basicTests {
-		result := CompileCustom(in, testCustomCompiler{})
+	c := NewCompiler(false, false)
+	c.SetTag("url", nil)
+	c.SetTag("img", compileImg)
+	for in, out := range customTests {
+		result := c.Compile(in)
 		if result != out {
 			t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", in, out, result)
 		}

@@ -5,19 +5,6 @@
 // Package bbcode implements a parser and HTML generator for BBCode.
 package bbcode
 
-// Compile transforms a string of BBCode to HTML.
-func Compile(str string) string {
-	return CompileCustom(str, DefaultCompiler{false, false})
-}
-
-// CompileCustom uses a custom Compiler implementation to transform a string of
-// BBCode to HTML.
-func CompileCustom(str string, compiler Compiler) string {
-	tokens := Lex(str)
-	tree := Parse(tokens)
-	return compiler.Compile(tree).String()
-}
-
 type BBOpeningTag struct {
 	Name  string
 	Value string

@@ -8,197 +8,278 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
-// Compiler represents the base interface for a BBCode compiler.
-// Implement this and call CompileCustom to override default behaviour.
-// You may embed DefaultCompiler if you just need to make some small tweaks.
-type Compiler interface {
-	Compile(node *BBCodeNode) *HTMLTag
-	CompileRaw(node *BBCodeNode) *HTMLTag
-}
+type TagCompilerFunc func(*BBCodeNode, BBOpeningTag) (*HTMLTag, bool)
 
-type DefaultCompiler struct {
+type Compiler struct {
+	tagCompilers               map[string]TagCompilerFunc
 	AutoCloseTags              bool
 	IgnoreUnmatchedClosingTags bool
 }
 
-var youtubeRegex = regexp.MustCompile(`(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?([a-zA-Z0-9]+)`)
+func NewCompiler(autoCloseTags, ignoreUnmatchedClosingTags bool) Compiler {
+	compiler := Compiler{make(map[string]TagCompilerFunc), autoCloseTags, ignoreUnmatchedClosingTags}
 
-// compile transforms a tag and subexpression into an HTML string.
-// It is only used by the generated parser code.
-func (c DefaultCompiler) Compile(node *BBCodeNode) *HTMLTag {
+	for tag, compilerFunc := range DefaultTagCompilers {
+		compiler.SetTag(tag, compilerFunc)
+	}
+	return compiler
+}
+
+func (c Compiler) Compile(str string) string {
+	tokens := Lex(str)
+	tree := Parse(tokens)
+	return c.CompileTree(tree).String()
+}
+
+func (c Compiler) SetTag(tag string, compiler TagCompilerFunc) {
+	if compiler == nil {
+		delete(c.tagCompilers, tag)
+	} else {
+		c.tagCompilers[tag] = compiler
+	}
+}
+
+// CompileTree transforms BBCodeNode into an HTML tag.
+func (c Compiler) CompileTree(node *BBCodeNode) *HTMLTag {
 	var out = NewHTMLTag("")
 	if node.ID == TEXT {
 		out.Value = node.Value.(string)
 		insertNewlines(out)
 		for _, child := range node.Children {
-			out.AppendChild(c.Compile(child))
+			out.AppendChild(c.CompileTree(child))
 		}
 	} else if node.ID == CLOSING_TAG {
 		if !c.IgnoreUnmatchedClosingTags {
 			out.Value = node.Value.(BBClosingTag).Raw
+			insertNewlines(out)
 		}
 		for _, child := range node.Children {
-			out.AppendChild(c.Compile(child))
+			out.AppendChild(c.CompileTree(child))
 		}
 	} else if node.ClosingTag == nil && !c.AutoCloseTags {
 		out.Value = node.Value.(BBOpeningTag).Raw
+		insertNewlines(out)
 		for _, child := range node.Children {
-			out.AppendChild(c.Compile(child))
+			out.AppendChild(c.CompileTree(child))
 		}
 	} else {
 		in := node.Value.(BBOpeningTag)
-		var expr *HTMLTag
-		if len(node.Children) == 1 {
-			expr = c.Compile(node.Children[0])
-		} else if len(node.Children) > 1 {
-			expr = NewHTMLTag("")
-			for _, child := range node.Children {
-				expr.AppendChild(c.Compile(child))
-			}
-		}
 
-		switch in.Name {
-		case "url":
-			out.Name = "a"
-			if in.Value == "" {
-				if expr != nil {
-					out.Attrs["href"] = safeURL(expr.Value)
+		compileFunc, ok := c.tagCompilers[in.Name]
+		if ok {
+			var appendExpr bool
+			out, appendExpr = compileFunc(node, in)
+			if appendExpr {
+				if len(node.Children) == 0 {
+					out.AppendChild(NewHTMLTag(""))
 				} else {
-					out.Attrs["href"] = ""
-				}
-			} else {
-				out.Attrs["href"] = safeURL(in.Value)
-			}
-			out.AppendChild(expr)
-		case "img":
-			out.Name = "img"
-			if in.Value == "" {
-				if expr != nil {
-					out.Attrs["src"] = safeURL(expr.Value)
-				} else {
-					out.Attrs["src"] = ""
-				}
-			} else {
-				out.Attrs["src"] = safeURL(in.Value)
-				if expr != nil {
-					out.Attrs["alt"] = expr.Value
-				}
-			}
-		case "media":
-			if expr == nil {
-				out.Value = "Embedded video"
-			} else {
-				out.Name = "div"
-				out.Attrs["class"] = "embedded-video"
-
-				obj := NewHTMLTag("Embedded video")
-				out.AppendChild(obj)
-
-				matches := youtubeRegex.FindStringSubmatch(expr.Value)
-				if matches != nil {
-					obj = NewHTMLTag("")
-					obj.Name = "object"
-					obj.Attrs["width"] = "620"
-					obj.Attrs["height"] = "349"
-
-					params := map[string]string{
-						"movie":             fmt.Sprintf("//www.youtube.com/v/%s?version=3", matches[1]),
-						"wmode":             "transparent",
-						"allowFullScreen":   "true",
-						"allowscriptaccess": "always",
+					for _, child := range node.Children {
+						out.AppendChild(c.CompileTree(child))
 					}
-
-					embed := NewHTMLTag("")
-					embed.Name = "embed"
-					embed.Attrs["type"] = "application/x-shockwave-flash"
-					embed.Attrs["width"] = "620"
-					embed.Attrs["height"] = "349"
-					for name, value := range params {
-						param := NewHTMLTag("")
-						param.Name = "param"
-						param.Attrs["name"] = name
-						param.Attrs["value"] = value
-						obj.AppendChild(param)
-
-						if name == "movie" {
-							name = "src"
-						}
-						embed.Attrs[name] = value
-					}
-					obj.AppendChild(embed)
-					out.AppendChild(obj)
 				}
 			}
-		case "center":
-			out.Name = "div"
-			out.Attrs["style"] = "text-align: center;"
-			out.AppendChild(expr)
-		case "color":
-			return expr
-		case "size":
-			out.Name = "span"
-			if size, err := strconv.Atoi(in.Value); err == nil {
-				out.Attrs["style"] = fmt.Sprintf("font-size: %dpx;", size*4)
-			}
-			out.AppendChild(expr)
-		case "spoiler":
-			out.Name = "div"
-			out.Attrs["class"] = "expandable collapsed"
-			out.AppendChild(expr)
-		case "quote":
-			out.Name = "blockquote"
-			who := ""
-			if name, ok := in.Args["name"]; ok && name != "" {
-				who = name
-			} else {
-				who = in.Value
-			}
-			cite := NewHTMLTag("")
-			cite.Name = "cite"
-			if who != "" {
-				cite.AppendChild(NewHTMLTag(who + " said:"))
-			} else {
-				cite.AppendChild(NewHTMLTag("Quote"))
-			}
-			out.AppendChild(cite)
-			out.AppendChild(expr)
-		case "strike":
-			out.Name = "s"
-			out.AppendChild(expr)
-		case "code":
-			out.Name = "code"
-			for _, child := range node.Children {
-				out.AppendChild(c.CompileRaw(child))
-			}
-		case "i", "b", "u":
-			out.Name = in.Name
-			out.AppendChild(expr)
-		default:
+		} else {
 			out.Value = in.Raw
 			insertNewlines(out)
-			out.AppendChild(expr).AppendChild(NewHTMLTag("[/" + in.Name + "]"))
+			if len(node.Children) == 0 {
+				out.AppendChild(NewHTMLTag(""))
+			} else {
+				for _, child := range node.Children {
+					out.AppendChild(c.CompileTree(child))
+				}
+			}
+			if node.ClosingTag != nil {
+				tag := NewHTMLTag(node.ClosingTag.Raw)
+				insertNewlines(tag)
+				out.AppendChild(tag)
+			}
 		}
 	}
 	return out
 }
 
-func (c DefaultCompiler) CompileRaw(in *BBCodeNode) *HTMLTag {
+func CompileText(in *BBCodeNode) string {
+	out := ""
+	if in.ID == TEXT {
+		out = strings.Replace(in.Value.(string), "\n", "", -1)
+	}
+	for _, child := range in.Children {
+		out += CompileText(child)
+	}
+	return out
+}
+
+func CompileRaw(in *BBCodeNode) *HTMLTag {
 	out := NewHTMLTag("")
 	if in.ID == TEXT {
 		out.Value = in.Value.(string)
-	} else if in.ID == OPENING_TAG {
-		out.Value = in.Value.(BBOpeningTag).Raw
 	} else if in.ID == CLOSING_TAG {
 		out.Value = in.Value.(BBClosingTag).Raw
+	} else {
+		out.Value = in.Value.(BBOpeningTag).Raw
 	}
 	insertNewlines(out)
 	for _, child := range in.Children {
-		out.AppendChild(c.CompileRaw(child))
+		out.AppendChild(CompileRaw(child))
 	}
-	if in.ID == OPENING_TAG {
-		out.AppendChild(NewHTMLTag("[/" + in.Value.(BBOpeningTag).Name + "]"))
+	if in.ID == OPENING_TAG && in.ClosingTag != nil {
+		tag := NewHTMLTag(in.ClosingTag.Raw)
+		insertNewlines(tag)
+		out.AppendChild(tag)
 	}
 	return out
+}
+
+var DefaultTagCompilers map[string]TagCompilerFunc
+
+func init() {
+	DefaultTagCompilers = make(map[string]TagCompilerFunc)
+	DefaultTagCompilers["url"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
+		out := NewHTMLTag("")
+		out.Name = "a"
+		if in.Value == "" {
+			text := CompileText(node)
+			if len(text) > 0 {
+				out.Attrs["href"] = safeURL(text)
+			}
+		} else {
+			out.Attrs["href"] = safeURL(in.Value)
+		}
+		return out, true
+	}
+
+	DefaultTagCompilers["img"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
+		out := NewHTMLTag("")
+		out.Name = "img"
+		if in.Value == "" {
+			out.Attrs["src"] = safeURL(CompileText(node))
+		} else {
+			out.Attrs["src"] = safeURL(in.Value)
+			text := CompileText(node)
+			if len(text) > 0 {
+				out.Attrs["alt"] = text
+				out.Attrs["title"] = out.Attrs["alt"]
+			}
+		}
+		return out, false
+	}
+
+	var youtubeRegex = regexp.MustCompile(`(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?([a-zA-Z0-9]+)`)
+	DefaultTagCompilers["media"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
+		out := NewHTMLTag("")
+		mediaUrl := CompileText(node)
+		out.Name = "div"
+		out.Attrs["class"] = "embedded-video"
+
+		obj := NewHTMLTag("Embedded video")
+		out.AppendChild(obj)
+
+		matches := youtubeRegex.FindStringSubmatch(mediaUrl)
+		if matches != nil {
+			obj = NewHTMLTag("")
+			obj.Name = "object"
+			obj.Attrs["width"] = "620"
+			obj.Attrs["height"] = "349"
+
+			params := map[string]string{
+				"movie":             fmt.Sprintf("//www.youtube.com/v/%s?version=3", matches[1]),
+				"wmode":             "transparent",
+				"allowFullScreen":   "true",
+				"allowscriptaccess": "always",
+			}
+
+			embed := NewHTMLTag("")
+			embed.Name = "embed"
+			embed.Attrs["type"] = "application/x-shockwave-flash"
+			embed.Attrs["width"] = "620"
+			embed.Attrs["height"] = "349"
+			for name, value := range params {
+				param := NewHTMLTag("")
+				param.Name = "param"
+				param.Attrs["name"] = name
+				param.Attrs["value"] = value
+				obj.AppendChild(param)
+
+				if name == "movie" {
+					name = "src"
+				}
+				embed.Attrs[name] = value
+			}
+			obj.AppendChild(embed)
+			out.AppendChild(obj)
+		}
+		return out, false
+	}
+
+	DefaultTagCompilers["center"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
+		out := NewHTMLTag("")
+		out.Name = "div"
+		out.Attrs["style"] = "text-align: center;"
+		return out, true
+	}
+
+	DefaultTagCompilers["color"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
+		return NewHTMLTag(""), true
+	}
+
+	DefaultTagCompilers["size"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
+		out := NewHTMLTag("")
+		out.Name = "span"
+		if size, err := strconv.Atoi(in.Value); err == nil {
+			out.Attrs["style"] = fmt.Sprintf("font-size: %dpx;", size*4)
+		}
+		return out, true
+	}
+
+	DefaultTagCompilers["spoiler"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
+		out := NewHTMLTag("")
+		out.Name = "div"
+		out.Attrs["class"] = "expandable collapsed"
+		return out, true
+	}
+
+	DefaultTagCompilers["quote"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
+		out := NewHTMLTag("")
+		out.Name = "blockquote"
+		who := ""
+		if name, ok := in.Args["name"]; ok && name != "" {
+			who = name
+		} else {
+			who = in.Value
+		}
+		cite := NewHTMLTag("")
+		cite.Name = "cite"
+		if who != "" {
+			cite.AppendChild(NewHTMLTag(who + " said:"))
+		} else {
+			cite.AppendChild(NewHTMLTag("Quote"))
+		}
+		return out.AppendChild(cite), true
+	}
+
+	DefaultTagCompilers["strike"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
+		out := NewHTMLTag("")
+		out.Name = "s"
+		return out, true
+	}
+
+	DefaultTagCompilers["code"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
+		out := NewHTMLTag("")
+		out.Name = "code"
+		for _, child := range node.Children {
+			out.AppendChild(CompileRaw(child))
+		}
+		return out, false
+	}
+
+	for _, tag := range []string{"i", "b", "u"} {
+		DefaultTagCompilers[tag] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
+			out := NewHTMLTag("")
+			out.Name = in.Name
+			return out, true
+		}
+	}
 }
