@@ -59,7 +59,8 @@ var sanitizationTests = map[string]string{
 	`[url=<script>]<script>[/url]`: `<a href="%3Cscript%3E">&lt;script&gt;</a>`,
 	`[img=<script>]<script>[/img]`: `<img src="%3Cscript%3E" alt="&lt;script&gt;" title="&lt;script&gt;">`,
 
-	`[url=http://a.b/z?\]link[/url]`: `<a href="http://a.b/z?%5C">link</a>`,
+	`[url=http://a.b/z?\]link[/url]`:      `<a href="http://a.b/z?\">link</a>`,
+	`[img="http://\"a.b/z"]"link"\[/img]`: `<img src="http://&#34;a.b/z" alt="&#34;link&#34;\" title="&#34;link&#34;\">`,
 }
 
 func TestSanitization(t *testing.T) {

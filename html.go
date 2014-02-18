@@ -31,11 +31,11 @@ func NewHTMLTag(value string) *HTMLTag {
 func (t *HTMLTag) String() string {
 	var value string
 	if t.Value != "" {
-		value = sanitize(t.Value)
+		value = html.EscapeString(t.Value)
 	}
 	var attrString string
 	for key, value := range t.Attrs {
-		attrString = fmt.Sprintf(`%s %s="%s"`, attrString, key, escapeQuotes(sanitize(value)))
+		attrString = fmt.Sprintf(`%s %s="%s"`, attrString, key, strings.Replace(html.EscapeString(value), "\n", "", -1))
 	}
 	if len(t.Children) > 0 {
 		var childrenString string
@@ -63,7 +63,7 @@ func (t *HTMLTag) AppendChild(child *HTMLTag) *HTMLTag {
 	return t
 }
 
-func insertNewlines(out *HTMLTag) {
+func InsertNewlines(out *HTMLTag) {
 	if strings.ContainsRune(out.Value, '\n') {
 		parts := strings.Split(out.Value, "\n")
 		for i, part := range parts {
@@ -83,18 +83,10 @@ func NewlineTag() *HTMLTag {
 	return out
 }
 
-func escapeQuotes(raw string) string {
-	return strings.Replace(strings.Replace(raw, `"`, `\"`, -1), `\`, `\\`, -1)
-}
-
-func safeURL(raw string) string {
+func ValidURL(raw string) string {
 	u, err := url.Parse(raw)
 	if err != nil {
 		return ""
 	}
-	return strings.Replace(u.String(), `\`, "%5C", -1)
-}
-
-func sanitize(raw string) string {
-	return html.EscapeString(raw)
+	return u.String()
 }

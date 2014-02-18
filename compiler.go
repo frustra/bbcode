@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
-	"strings"
 )
 
 type TagCompilerFunc func(*BBCodeNode, BBOpeningTag) (*HTMLTag, bool)
@@ -47,21 +46,21 @@ func (c Compiler) CompileTree(node *BBCodeNode) *HTMLTag {
 	var out = NewHTMLTag("")
 	if node.ID == TEXT {
 		out.Value = node.Value.(string)
-		insertNewlines(out)
+		InsertNewlines(out)
 		for _, child := range node.Children {
 			out.AppendChild(c.CompileTree(child))
 		}
 	} else if node.ID == CLOSING_TAG {
 		if !c.IgnoreUnmatchedClosingTags {
 			out.Value = node.Value.(BBClosingTag).Raw
-			insertNewlines(out)
+			InsertNewlines(out)
 		}
 		for _, child := range node.Children {
 			out.AppendChild(c.CompileTree(child))
 		}
 	} else if node.ClosingTag == nil && !c.AutoCloseTags {
 		out.Value = node.Value.(BBOpeningTag).Raw
-		insertNewlines(out)
+		InsertNewlines(out)
 		for _, child := range node.Children {
 			out.AppendChild(c.CompileTree(child))
 		}
@@ -83,7 +82,7 @@ func (c Compiler) CompileTree(node *BBCodeNode) *HTMLTag {
 			}
 		} else {
 			out.Value = in.Raw
-			insertNewlines(out)
+			InsertNewlines(out)
 			if len(node.Children) == 0 {
 				out.AppendChild(NewHTMLTag(""))
 			} else {
@@ -93,7 +92,7 @@ func (c Compiler) CompileTree(node *BBCodeNode) *HTMLTag {
 			}
 			if node.ClosingTag != nil {
 				tag := NewHTMLTag(node.ClosingTag.Raw)
-				insertNewlines(tag)
+				InsertNewlines(tag)
 				out.AppendChild(tag)
 			}
 		}
@@ -104,7 +103,7 @@ func (c Compiler) CompileTree(node *BBCodeNode) *HTMLTag {
 func CompileText(in *BBCodeNode) string {
 	out := ""
 	if in.ID == TEXT {
-		out = strings.Replace(in.Value.(string), "\n", "", -1)
+		out = in.Value.(string)
 	}
 	for _, child := range in.Children {
 		out += CompileText(child)
@@ -121,13 +120,13 @@ func CompileRaw(in *BBCodeNode) *HTMLTag {
 	} else {
 		out.Value = in.Value.(BBOpeningTag).Raw
 	}
-	insertNewlines(out)
+	InsertNewlines(out)
 	for _, child := range in.Children {
 		out.AppendChild(CompileRaw(child))
 	}
 	if in.ID == OPENING_TAG && in.ClosingTag != nil {
 		tag := NewHTMLTag(in.ClosingTag.Raw)
-		insertNewlines(tag)
+		InsertNewlines(tag)
 		out.AppendChild(tag)
 	}
 	return out
@@ -143,10 +142,10 @@ func init() {
 		if in.Value == "" {
 			text := CompileText(node)
 			if len(text) > 0 {
-				out.Attrs["href"] = safeURL(text)
+				out.Attrs["href"] = ValidURL(text)
 			}
 		} else {
-			out.Attrs["href"] = safeURL(in.Value)
+			out.Attrs["href"] = ValidURL(in.Value)
 		}
 		return out, true
 	}
@@ -155,9 +154,9 @@ func init() {
 		out := NewHTMLTag("")
 		out.Name = "img"
 		if in.Value == "" {
-			out.Attrs["src"] = safeURL(CompileText(node))
+			out.Attrs["src"] = ValidURL(CompileText(node))
 		} else {
-			out.Attrs["src"] = safeURL(in.Value)
+			out.Attrs["src"] = ValidURL(in.Value)
 			text := CompileText(node)
 			if len(text) > 0 {
 				out.Attrs["alt"] = text
