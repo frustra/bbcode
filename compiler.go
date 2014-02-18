@@ -6,7 +6,6 @@ package bbcode
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 )
 
@@ -166,53 +165,6 @@ func init() {
 		return out, false
 	}
 
-	var youtubeRegex = regexp.MustCompile(`(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?([a-zA-Z0-9]+)`)
-	DefaultTagCompilers["media"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
-		out := NewHTMLTag("")
-		mediaUrl := CompileText(node)
-		out.Name = "div"
-		out.Attrs["class"] = "embedded-video"
-
-		obj := NewHTMLTag("Embedded video")
-		out.AppendChild(obj)
-
-		matches := youtubeRegex.FindStringSubmatch(mediaUrl)
-		if matches != nil {
-			obj = NewHTMLTag("")
-			obj.Name = "object"
-			obj.Attrs["width"] = "620"
-			obj.Attrs["height"] = "349"
-
-			params := map[string]string{
-				"movie":             fmt.Sprintf("//www.youtube.com/v/%s?version=3", matches[1]),
-				"wmode":             "transparent",
-				"allowFullScreen":   "true",
-				"allowscriptaccess": "always",
-			}
-
-			embed := NewHTMLTag("")
-			embed.Name = "embed"
-			embed.Attrs["type"] = "application/x-shockwave-flash"
-			embed.Attrs["width"] = "620"
-			embed.Attrs["height"] = "349"
-			for name, value := range params {
-				param := NewHTMLTag("")
-				param.Name = "param"
-				param.Attrs["name"] = name
-				param.Attrs["value"] = value
-				obj.AppendChild(param)
-
-				if name == "movie" {
-					name = "src"
-				}
-				embed.Attrs[name] = value
-			}
-			obj.AppendChild(embed)
-			out.AppendChild(obj)
-		}
-		return out, false
-	}
-
 	DefaultTagCompilers["center"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
 		out := NewHTMLTag("")
 		out.Name = "div"
@@ -221,7 +173,10 @@ func init() {
 	}
 
 	DefaultTagCompilers["color"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
-		return NewHTMLTag(""), true
+		out := NewHTMLTag("")
+		out.Name = "span"
+		out.Attrs["style"] = "color: " + in.Value + ";"
+		return out, true
 	}
 
 	DefaultTagCompilers["size"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
@@ -230,13 +185,6 @@ func init() {
 		if size, err := strconv.Atoi(in.Value); err == nil {
 			out.Attrs["style"] = fmt.Sprintf("font-size: %dpx;", size*4)
 		}
-		return out, true
-	}
-
-	DefaultTagCompilers["spoiler"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
-		out := NewHTMLTag("")
-		out.Name = "div"
-		out.Attrs["class"] = "expandable collapsed"
 		return out, true
 	}
 
@@ -259,12 +207,6 @@ func init() {
 		return out.AppendChild(cite), true
 	}
 
-	DefaultTagCompilers["strike"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
-		out := NewHTMLTag("")
-		out.Name = "s"
-		return out, true
-	}
-
 	DefaultTagCompilers["code"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
 		out := NewHTMLTag("")
 		out.Name = "code"
@@ -274,7 +216,7 @@ func init() {
 		return out, false
 	}
 
-	for _, tag := range []string{"i", "b", "u"} {
+	for _, tag := range []string{"i", "b", "u", "s"} {
 		DefaultTagCompilers[tag] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
 			out := NewHTMLTag("")
 			out.Name = in.Name
