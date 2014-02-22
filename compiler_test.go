@@ -122,8 +122,8 @@ var customTests = map[string]string{
 	`[url]//foo/bar.png[/url]`: `[url]//foo/bar.png[/url]`,
 }
 
-func compileImg(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
-	out, appendExpr := DefaultTagCompilers["img"](node, in)
+func compileImg(node *BBCodeNode) (*HTMLTag, bool) {
+	out, appendExpr := DefaultTagCompilers["img"](node)
 	out.Attrs["src"] = "//custom.png"
 	return out, appendExpr
 }

@@ -70,7 +70,10 @@ func InsertNewlines(out *HTMLTag) {
 			if i == 0 {
 				out.Value = parts[i]
 			} else {
-				out.AppendChild(NewlineTag()).AppendChild(NewHTMLTag(part))
+				out.AppendChild(NewlineTag())
+				if len(part) > 0 {
+					out.AppendChild(NewHTMLTag(part))
+				}
 			}
 		}
 	}

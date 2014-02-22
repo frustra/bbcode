@@ -9,6 +9,17 @@ type BBCodeNode struct {
 	Parent     *BBCodeNode
 	Children   []*BBCodeNode
 	ClosingTag *BBClosingTag
+
+	Compiler *Compiler
+	Info     interface{}
+}
+
+func (n *BBCodeNode) GetOpeningTag() *BBOpeningTag {
+	if tag, ok := n.Value.(BBOpeningTag); ok {
+		return &tag
+	} else {
+		return nil
+	}
 }
 
 func (n *BBCodeNode) appendChild(t Token) *BBCodeNode {
@@ -30,7 +41,7 @@ func (n *BBCodeNode) appendChild(t Token) *BBCodeNode {
 		return n
 	}
 
-	node := &BBCodeNode{t, n, make([]*BBCodeNode, 0), nil}
+	node := &BBCodeNode{t, n, make([]*BBCodeNode, 0), nil, nil, nil}
 	n.Children = append(n.Children, node)
 	if t.ID == OPENING_TAG {
 		return node
@@ -40,7 +51,7 @@ func (n *BBCodeNode) appendChild(t Token) *BBCodeNode {
 }
 
 func Parse(tokens chan Token) *BBCodeNode {
-	root := &BBCodeNode{Token{TEXT, ""}, nil, make([]*BBCodeNode, 0), nil}
+	root := &BBCodeNode{Token{TEXT, ""}, nil, make([]*BBCodeNode, 0), nil, nil, nil}
 	curr := root
 	for tok := range tokens {
 		curr = curr.appendChild(tok)

@@ -9,16 +9,17 @@ import (
 	"strconv"
 )
 
-type TagCompilerFunc func(*BBCodeNode, BBOpeningTag) (*HTMLTag, bool)
+type TagCompilerFunc func(*BBCodeNode) (*HTMLTag, bool)
 
 type Compiler struct {
 	tagCompilers               map[string]TagCompilerFunc
+	defaultCompiler            TagCompilerFunc
 	AutoCloseTags              bool
 	IgnoreUnmatchedClosingTags bool
 }
 
 func NewCompiler(autoCloseTags, ignoreUnmatchedClosingTags bool) Compiler {
-	compiler := Compiler{make(map[string]TagCompilerFunc), autoCloseTags, ignoreUnmatchedClosingTags}
+	compiler := Compiler{make(map[string]TagCompilerFunc), DefaultTagCompiler, autoCloseTags, ignoreUnmatchedClosingTags}
 
 	for tag, compilerFunc := range DefaultTagCompilers {
 		compiler.SetTag(tag, compilerFunc)
@@ -30,6 +31,14 @@ func (c Compiler) Compile(str string) string {
 	tokens := Lex(str)
 	tree := Parse(tokens)
 	return c.CompileTree(tree).String()
+}
+
+func (c Compiler) SetDefault(compiler TagCompilerFunc) {
+	if compiler == nil {
+		panic("Default tag compiler can't be nil")
+	} else {
+		c.defaultCompiler = compiler
+	}
 }
 
 func (c Compiler) SetTag(tag string, compiler TagCompilerFunc) {
@@ -64,35 +73,22 @@ func (c Compiler) CompileTree(node *BBCodeNode) *HTMLTag {
 			out.AppendChild(c.CompileTree(child))
 		}
 	} else {
-		in := node.Value.(BBOpeningTag)
+		in := node.GetOpeningTag()
 
 		compileFunc, ok := c.tagCompilers[in.Name]
-		if ok {
-			var appendExpr bool
-			out, appendExpr = compileFunc(node, in)
-			if appendExpr {
-				if len(node.Children) == 0 {
-					out.AppendChild(NewHTMLTag(""))
-				} else {
-					for _, child := range node.Children {
-						out.AppendChild(c.CompileTree(child))
-					}
-				}
-			}
-		} else {
-			out.Value = in.Raw
-			InsertNewlines(out)
+		if !ok {
+			compileFunc = c.defaultCompiler
+		}
+		var appendExpr bool
+		node.Compiler = &c
+		out, appendExpr = compileFunc(node)
+		if appendExpr {
 			if len(node.Children) == 0 {
 				out.AppendChild(NewHTMLTag(""))
 			} else {
 				for _, child := range node.Children {
 					out.AppendChild(c.CompileTree(child))
 				}
-			}
-			if node.ClosingTag != nil {
-				tag := NewHTMLTag(node.ClosingTag.Raw)
-				InsertNewlines(tag)
-				out.AppendChild(tag)
 			}
 		}
 	}
@@ -132,30 +128,51 @@ func CompileRaw(in *BBCodeNode) *HTMLTag {
 }
 
 var DefaultTagCompilers map[string]TagCompilerFunc
+var DefaultTagCompiler TagCompilerFunc
 
 func init() {
+	DefaultTagCompiler = func(node *BBCodeNode) (*HTMLTag, bool) {
+		out := NewHTMLTag(node.GetOpeningTag().Raw)
+		InsertNewlines(out)
+		if len(node.Children) == 0 {
+			out.AppendChild(NewHTMLTag(""))
+		} else {
+			for _, child := range node.Children {
+				out.AppendChild(node.Compiler.CompileTree(child))
+			}
+		}
+		if node.ClosingTag != nil {
+			tag := NewHTMLTag(node.ClosingTag.Raw)
+			InsertNewlines(tag)
+			out.AppendChild(tag)
+		}
+		return out, false
+	}
+
 	DefaultTagCompilers = make(map[string]TagCompilerFunc)
-	DefaultTagCompilers["url"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
+	DefaultTagCompilers["url"] = func(node *BBCodeNode) (*HTMLTag, bool) {
 		out := NewHTMLTag("")
 		out.Name = "a"
-		if in.Value == "" {
+		value := node.GetOpeningTag().Value
+		if value == "" {
 			text := CompileText(node)
 			if len(text) > 0 {
 				out.Attrs["href"] = ValidURL(text)
 			}
 		} else {
-			out.Attrs["href"] = ValidURL(in.Value)
+			out.Attrs["href"] = ValidURL(value)
 		}
 		return out, true
 	}
 
-	DefaultTagCompilers["img"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
+	DefaultTagCompilers["img"] = func(node *BBCodeNode) (*HTMLTag, bool) {
 		out := NewHTMLTag("")
 		out.Name = "img"
-		if in.Value == "" {
+		value := node.GetOpeningTag().Value
+		if value == "" {
 			out.Attrs["src"] = ValidURL(CompileText(node))
 		} else {
-			out.Attrs["src"] = ValidURL(in.Value)
+			out.Attrs["src"] = ValidURL(value)
 			text := CompileText(node)
 			if len(text) > 0 {
 				out.Attrs["alt"] = text
@@ -165,33 +182,34 @@ func init() {
 		return out, false
 	}
 
-	DefaultTagCompilers["center"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
+	DefaultTagCompilers["center"] = func(node *BBCodeNode) (*HTMLTag, bool) {
 		out := NewHTMLTag("")
 		out.Name = "div"
 		out.Attrs["style"] = "text-align: center;"
 		return out, true
 	}
 
-	DefaultTagCompilers["color"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
+	DefaultTagCompilers["color"] = func(node *BBCodeNode) (*HTMLTag, bool) {
 		out := NewHTMLTag("")
 		out.Name = "span"
-		out.Attrs["style"] = "color: " + in.Value + ";"
+		out.Attrs["style"] = "color: " + node.GetOpeningTag().Value + ";"
 		return out, true
 	}
 
-	DefaultTagCompilers["size"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
+	DefaultTagCompilers["size"] = func(node *BBCodeNode) (*HTMLTag, bool) {
 		out := NewHTMLTag("")
 		out.Name = "span"
-		if size, err := strconv.Atoi(in.Value); err == nil {
+		if size, err := strconv.Atoi(node.GetOpeningTag().Value); err == nil {
 			out.Attrs["style"] = fmt.Sprintf("font-size: %dpx;", size*4)
 		}
 		return out, true
 	}
 
-	DefaultTagCompilers["quote"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
+	DefaultTagCompilers["quote"] = func(node *BBCodeNode) (*HTMLTag, bool) {
 		out := NewHTMLTag("")
 		out.Name = "blockquote"
 		who := ""
+		in := node.GetOpeningTag()
 		if name, ok := in.Args["name"]; ok && name != "" {
 			who = name
 		} else {
@@ -207,7 +225,7 @@ func init() {
 		return out.AppendChild(cite), true
 	}
 
-	DefaultTagCompilers["code"] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
+	DefaultTagCompilers["code"] = func(node *BBCodeNode) (*HTMLTag, bool) {
 		out := NewHTMLTag("")
 		out.Name = "code"
 		for _, child := range node.Children {
@@ -217,9 +235,9 @@ func init() {
 	}
 
 	for _, tag := range []string{"i", "b", "u", "s"} {
-		DefaultTagCompilers[tag] = func(node *BBCodeNode, in BBOpeningTag) (*HTMLTag, bool) {
+		DefaultTagCompilers[tag] = func(node *BBCodeNode) (*HTMLTag, bool) {
 			out := NewHTMLTag("")
-			out.Name = in.Name
+			out.Name = node.GetOpeningTag().Name
 			return out, true
 		}
 	}
