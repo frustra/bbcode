@@ -31,7 +31,7 @@ var basicTests = map[string]string{
 	"[b]test[/b]\n\nnewline": `<b>test</b><br><br>newline`,
 	"[b]test\nnewline[/b]":   `<b>test<br>newline</b>`,
 
-	"[code][b]some[/b][i]stuff[/i][/quote][/code][b]more[/b]":             `<code>[b]some[/b][i]stuff[/i][/quote]</code><b>more</b>`,
+	"[code][b]some[/b]\n[i]stuff[/i]\n[/quote][/code][b]more[/b]":         "<pre>[b]some[/b]\n[i]stuff[/i]\n[/quote]</pre><b>more</b>",
 	"[quote name=Someguy]hello[/quote]":                                   `<blockquote><cite>Someguy said:</cite>hello</blockquote>`,
 	"[center]hello[/center]":                                              `<div style="text-align: center;">hello</div>`,
 	"[size=6]hello[/size]":                                                `<span style="font-size: 24px;">hello</span>`,
