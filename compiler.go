@@ -198,7 +198,7 @@ func init() {
 		out := NewHTMLTag("")
 		out.Name = "span"
 		if size, err := strconv.Atoi(node.GetOpeningTag().Value); err == nil {
-			out.Attrs["style"] = fmt.Sprintf("font-size: %dpx;", size*4)
+			out.Attrs["class"] = fmt.Sprintf("size%d", size)
 		}
 		return out, true
 	}
