@@ -13,10 +13,10 @@ var basicTests = map[string]string{
 	`[img][/img]`:                   `<img src="">`,
 
 	`[url=http://example.com]example[/url]`:  `<a href="http://example.com">example</a>`,
-	`[img=http://example.com]alt text[/img]`: `<img src="http://example.com" alt="alt text" title="alt text">`,
+	`[img=http://example.com]alt text[/img]`: `<img alt="alt text" src="http://example.com" title="alt text">`,
 	`[img=http://example.com][/img]`:         `<img src="http://example.com">`,
 
-	`[img = foo]bar[/img]`: `<img src="foo" alt="bar" title="bar">`,
+	`[img = foo]bar[/img]`: `<img alt="bar" src="foo" title="bar">`,
 
 	`[B]bold[/b]`:          `<b>bold</b>`,
 	`[i]italic[/i]`:        `<i>italic</i>`,
@@ -56,10 +56,10 @@ var sanitizationTests = map[string]string{
 	`[url]<script>[/url]`: `<a href="%3Cscript%3E">&lt;script&gt;</a>`,
 
 	`[url=<script>]<script>[/url]`: `<a href="%3Cscript%3E">&lt;script&gt;</a>`,
-	`[img=<script>]<script>[/img]`: `<img src="%3Cscript%3E" alt="&lt;script&gt;" title="&lt;script&gt;">`,
+	`[img=<script>]<script>[/img]`: `<img alt="&lt;script&gt;" src="%3Cscript%3E" title="&lt;script&gt;">`,
 
 	`[url=http://a.b/z?\]link[/url]`:      `<a href="http://a.b/z?\">link</a>`,
-	`[img="http://\"a.b/z"]"link"\[/img]`: `<img src="http://&#34;a.b/z" alt="&#34;link&#34;\" title="&#34;link&#34;\">`,
+	`[img="http://\"a.b/z"]"link"\[/img]`: `<img alt="&#34;link&#34;\" src="http://&#34;a.b/z" title="&#34;link&#34;\">`,
 }
 
 func TestSanitization(t *testing.T) {

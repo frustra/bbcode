@@ -5,9 +5,9 @@
 package bbcode
 
 import (
-	"fmt"
 	"html"
 	"net/url"
+	"sort"
 	"strings"
 )
 
@@ -34,21 +34,29 @@ func (t *HTMLTag) String() string {
 		value = html.EscapeString(t.Value)
 	}
 	var attrString string
-	for key, value := range t.Attrs {
-		attrString = fmt.Sprintf(`%s %s="%s"`, attrString, key, strings.Replace(html.EscapeString(value), "\n", "", -1))
+
+	keys := make([]string, len(t.Attrs))
+	i := 0
+	for key := range t.Attrs {
+		keys[i] = key
+		i++
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		attrString += " " + key + `="` + strings.Replace(html.EscapeString(t.Attrs[key]), "\n", "", -1) + `"`
 	}
 	if len(t.Children) > 0 {
 		var childrenString string
 		for _, child := range t.Children {
-			childrenString = fmt.Sprint(childrenString, child.String())
+			childrenString += child.String()
 		}
 		if t.Name != "" {
-			return fmt.Sprintf(`%s<%s%s>%s</%s>`, value, t.Name, attrString, childrenString, t.Name)
+			return value + "<" + t.Name + attrString + ">" + childrenString + "</" + t.Name + ">"
 		} else {
-			return fmt.Sprint(value, childrenString)
+			return value + childrenString
 		}
 	} else if t.Name != "" {
-		return fmt.Sprintf(`%s<%s%s>`, value, t.Name, attrString)
+		return value + "<" + t.Name + attrString + ">"
 	} else {
 		return value
 	}

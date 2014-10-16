@@ -5,6 +5,8 @@
 // Package bbcode implements a parser and HTML generator for BBCode.
 package bbcode
 
+import "sort"
+
 type BBOpeningTag struct {
 	Name  string
 	Value string
@@ -22,8 +24,16 @@ func (t *BBOpeningTag) String() string {
 	if len(t.Value) > 0 {
 		str += "=" + t.Value
 	}
-	for k, v := range t.Args {
-		str += " " + k
+	keys := make([]string, len(t.Args))
+	i := 0
+	for key := range t.Args {
+		keys[i] = key
+		i++
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		v := t.Args[key]
+		str += " " + key
 		if len(v) > 0 {
 			str += "=" + v
 		}

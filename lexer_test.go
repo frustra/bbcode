@@ -27,7 +27,7 @@ var prelexTests = map[string][]string{
 	"the quick brown[/b][b]hello[/b]":                                                  []string{"the quick brown", "</b>", "<b>", "hello", "</b>"},
 	"the quick brown[/b][/code]":                                                       []string{"the quick brown", "</b>", "</code>"},
 	"[quote\n		name=xthexder\n		time=555555\n	]hello[/quote]": []string{`<quote name=xthexder time=555555>`, `hello`, `</quote>`},
-	"[q\nuot\ne\nna\nme\n=\nxthex\nder\n]hello[/quote]": []string{`<q uot e na me=xthex der>`, `hello`, `</quote>`},
+	"[q\nuot\ne\nna\nme\n=\nxthex\nder\n]hello[/quote]": []string{`<q der e me=xthex na uot>`, `hello`, `</quote>`},
 
 	`[ b][	i]the quick brown[/i][/b=hello]`: []string{`<b>`, `<i>`, `the quick brown`, `</i>`, `</b=hello>`},
 	`[b [herp@#$%]]the quick brown[/b]`: []string{`[b `, `<herp@#$%>`, `]the quick brown`, `</b>`},
