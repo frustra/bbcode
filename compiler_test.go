@@ -4,7 +4,40 @@
 
 package bbcode
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
+
+var fullTestInput = `the quick brown [b]fox[/b]:
+[url=http://example][img]http://example.png[/img][/url]`
+
+var fullTestOutput = `the quick brown <b>fox</b>:<br><a href="http://example"><img src="http://example.png"></a>`
+
+func TestFullBasic(t *testing.T) {
+	c := NewCompiler(false, false)
+	input := fullTestInput
+	output := fullTestOutput
+	for in, out := range basicTests {
+		input += in
+		output += out
+	}
+	result := c.Compile(input)
+	if result != output {
+		t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", input, output, result)
+	}
+}
+
+func BenchmarkFullBasic(b *testing.B) {
+	c := NewCompiler(false, false)
+	input := fullTestInput
+	for in := range basicTests {
+		input += in
+	}
+	for i := 0; i < b.N; i++ {
+		c.Compile(input)
+	}
+}
 
 var basicTests = map[string]string{
 	``: ``,
@@ -12,11 +45,8 @@ var basicTests = map[string]string{
 	`[img]http://example.com[/img]`: `<img src="http://example.com">`,
 	`[img][/img]`:                   `<img src="">`,
 
-	`[url=http://example.com]example[/url]`:  `<a href="http://example.com">example</a>`,
-	`[img=http://example.com]alt text[/img]`: `<img alt="alt text" src="http://example.com" title="alt text">`,
-	`[img=http://example.com][/img]`:         `<img src="http://example.com">`,
-
-	`[img = foo]bar[/img]`: `<img alt="bar" src="foo" title="bar">`,
+	`[url=http://example.com]example[/url]`: `<a href="http://example.com">example</a>`,
+	`[img=http://example.com][/img]`:        `<img src="http://example.com">`,
 
 	`[B]bold[/b]`:          `<b>bold</b>`,
 	`[i]italic[/i]`:        `<i>italic</i>`,
@@ -40,6 +70,10 @@ var basicTests = map[string]string{
 	`[not a tag][/not ]`: `[not a tag][/not ]`,
 	`[not a tag]`:        `[not a tag]`,
 }
+var basicMultiArgTests = map[string][]string{
+	`[img=http://example.com]alt text[/img]`: []string{`<img`, ` src="http://example.com"`, ` alt="alt text"`, ` title="alt text"`, `>`},
+	`[img = foo]bar[/img]`:                   []string{`<img`, ` src="foo"`, ` alt="bar"`, ` title="bar"`, `>`},
+}
 
 func TestCompile(t *testing.T) {
 	c := NewCompiler(false, false)
@@ -49,6 +83,17 @@ func TestCompile(t *testing.T) {
 			t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", in, out, result)
 		}
 	}
+	for in, out := range basicMultiArgTests {
+		result := c.Compile(in)
+		if !strings.HasPrefix(result, out[0]) || !strings.HasSuffix(result, out[len(out)-1]) {
+			t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", in, out, result)
+		}
+		for i := 1; i < len(out)-1; i++ {
+			if !strings.Contains(result, out[i]) {
+				t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", in, out, result)
+			}
+		}
+	}
 }
 
 var sanitizationTests = map[string]string{
@@ -56,10 +101,12 @@ var sanitizationTests = map[string]string{
 	`[url]<script>[/url]`: `<a href="%3Cscript%3E">&lt;script&gt;</a>`,
 
 	`[url=<script>]<script>[/url]`: `<a href="%3Cscript%3E">&lt;script&gt;</a>`,
-	`[img=<script>]<script>[/img]`: `<img alt="&lt;script&gt;" src="%3Cscript%3E" title="&lt;script&gt;">`,
 
-	`[url=http://a.b/z?\]link[/url]`:      `<a href="http://a.b/z?\">link</a>`,
-	`[img="http://\"a.b/z"]"link"\[/img]`: `<img alt="&#34;link&#34;\" src="http://&#34;a.b/z" title="&#34;link&#34;\">`,
+	`[url=http://a.b/z?\]link[/url]`: `<a href="http://a.b/z?\">link</a>`,
+}
+var sanitizationMultiArgTests = map[string][]string{
+	`[img=<script>]<script>[/img]`:        []string{`<img`, ` src="%3Cscript%3E"`, ` alt="&lt;script&gt;"`, ` title="&lt;script&gt;"`, `>`},
+	`[img="http://\"a.b/z"]"link"\[/img]`: []string{`<img`, ` src="http://&#34;a.b/z"`, ` alt="&#34;link&#34;\"`, ` title="&#34;link&#34;\"`, `>`},
 }
 
 func TestSanitization(t *testing.T) {
@@ -70,25 +117,41 @@ func TestSanitization(t *testing.T) {
 			t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", in, out, result)
 		}
 	}
-}
-
-var fullTestInput = `the quick brown [b]fox[/b]:
-[url=http://example][img]http://example.png[/img][/url]`
-
-var fullTestOutput = `the quick brown <b>fox</b>:<br><a href="http://example"><img src="http://example.png"></a>`
-
-func TestFull(t *testing.T) {
-	c := NewCompiler(false, false)
-	result := c.Compile(fullTestInput)
-	if result != fullTestOutput {
-		t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", fullTestInput, fullTestOutput, result)
+	for in, out := range sanitizationMultiArgTests {
+		result := c.Compile(in)
+		if !strings.HasPrefix(result, out[0]) || !strings.HasSuffix(result, out[len(out)-1]) {
+			t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", in, out, result)
+		}
+		for i := 1; i < len(out)-1; i++ {
+			if !strings.Contains(result, out[i]) {
+				t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", in, out, result)
+			}
+		}
 	}
 }
 
-func BenchmarkFull(b *testing.B) {
+func TestFullSanitization(t *testing.T) {
 	c := NewCompiler(false, false)
+	input := fullTestInput
+	output := fullTestOutput
+	for in, out := range sanitizationTests {
+		input += in
+		output += out
+	}
+	result := c.Compile(input)
+	if result != output {
+		t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", input, output, result)
+	}
+}
+
+func BenchmarkFullSanitization(b *testing.B) {
+	c := NewCompiler(false, false)
+	input := fullTestInput
+	for in := range sanitizationTests {
+		input += in
+	}
 	for i := 0; i < b.N; i++ {
-		c.Compile(fullTestInput)
+		c.Compile(input)
 	}
 }
 
@@ -114,6 +177,17 @@ func TestBroken(t *testing.T) {
 		if result != out {
 			t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", in, out, result)
 		}
+	}
+}
+
+func BenchmarkFullBroken(b *testing.B) {
+	c := NewCompiler(false, false)
+	input := fullTestInput
+	for in := range brokenTests {
+		input += in
+	}
+	for i := 0; i < b.N; i++ {
+		c.Compile(input)
 	}
 }
 

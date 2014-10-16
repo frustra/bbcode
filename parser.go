@@ -41,7 +41,7 @@ func (n *BBCodeNode) appendChild(t Token) *BBCodeNode {
 		return n
 	}
 
-	node := &BBCodeNode{t, n, make([]*BBCodeNode, 0), nil, nil, nil}
+	node := &BBCodeNode{t, n, make([]*BBCodeNode, 0, 5), nil, nil, nil}
 	n.Children = append(n.Children, node)
 	if t.ID == OPENING_TAG {
 		return node
@@ -51,7 +51,7 @@ func (n *BBCodeNode) appendChild(t Token) *BBCodeNode {
 }
 
 func Parse(tokens chan Token) *BBCodeNode {
-	root := &BBCodeNode{Token{TEXT, ""}, nil, make([]*BBCodeNode, 0), nil, nil, nil}
+	root := &BBCodeNode{Token{TEXT, ""}, nil, make([]*BBCodeNode, 0, 5), nil, nil, nil}
 	curr := root
 	for tok := range tokens {
 		curr = curr.appendChild(tok)
