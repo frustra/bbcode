@@ -7,10 +7,13 @@ Visit the godoc here: [http://godoc.org/github.com/frustra/bbcode](http://godoc.
 
 ## Usage
 
-To get started compiling some text right away, create a compiler instance:
+To get started compiling some text, create a compiler instance:
 ```go
 compiler := bbcode.NewCompiler(true, true) // autoCloseTags, ignoreUnmatchedClosingTags
 fmt.Println(compiler.Compile("[b]Hello World[/b]"))
+
+// Output:
+// <b>Hello World</b>
 ```
 
 ## Supported BBCode Syntax
@@ -19,9 +22,7 @@ fmt.Println(compiler.Compile("[b]Hello World[/b]"))
 [tag1][tag2]nested tags[/tag2][/tag1]
 
 [tag=value]tag with value[/tag]
-
 [tag arg=value]tag with named argument[/tag]
-
 [tag="quote value"]tag with quoted value[/tag]
 
 [tag=value foo="hello world" bar=baz]multiple tag arguments[/tag]
@@ -41,6 +42,9 @@ fmt.Println(compiler.Compile("[b]Hello World[/b]"))
  * `[quote name=Somebody]text[/quote]` --> `<blockquote><cite>Somebody said:</cite>text</blockquote>`
  * `[code][b]anything[/b][/code]` --> `<pre>[b]anything[/b]</pre>`
 
+Lists are not currently implemented as a default tag, but can be added as a custom tag.  
+A working implementation of list tags can be found [here](https://gist.github.com/xthexder/44f4b9cec3ed7876780d)
+
 ## Adding Custom Tags
 Custom tag handlers can be added to a compiler using the `compiler.SetTag(tag, handler)` function:
 ```go
@@ -58,9 +62,9 @@ compiler.SetTag("center", func(node *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) 
 })
 ```
 
-Tag values can be read from the opening tag like this:
-Main tag value (`[tag={value}]`): `node.GetOpeningTag().Value`
-Tag arguments (`[tag name={value}]`): `node.GetOpeningTag().Args["name"]`
+Tag values can be read from the opening tag like this:  
+Main tag value `[tag={value}]`: `node.GetOpeningTag().Value`  
+Tag arguments `[tag name={value}]`: `node.GetOpeningTag().Args["name"]`
 
 `bbcode.NewHTMLTag(text)` creates a text node by default. By setting `tag.Name`, the node because an html tag prefixed by the text. The closing html tag is not rendered unless child elements exist. The closing tag can be forced by adding a blank text node:
 ```go
@@ -88,7 +92,7 @@ compiler.SetTag("url", func(node *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) {
 })
 ```
 
-## Auto-Close Tag Behaviour
+## Auto-Close Tags
 Input:
 ```
 [center][b]text[/center]
