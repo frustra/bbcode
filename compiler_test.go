@@ -34,6 +34,8 @@ func BenchmarkFullBasic(b *testing.B) {
 	for in := range basicTests {
 		input += in
 	}
+	b.SetBytes(int64(len(input)))
+	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		c.Compile(input)
 	}
@@ -150,6 +152,8 @@ func BenchmarkFullSanitization(b *testing.B) {
 	for in := range sanitizationTests {
 		input += in
 	}
+	b.SetBytes(int64(len(input)))
+	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		c.Compile(input)
 	}
@@ -186,6 +190,8 @@ func BenchmarkFullBroken(b *testing.B) {
 	for in := range brokenTests {
 		input += in
 	}
+	b.SetBytes(int64(len(input)))
+	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		c.Compile(input)
 	}
