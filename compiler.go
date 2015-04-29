@@ -7,6 +7,7 @@ package bbcode
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 type TagCompilerFunc func(*BBCodeNode) (*HTMLTag, bool)
@@ -190,7 +191,20 @@ func init() {
 	DefaultTagCompilers["color"] = func(node *BBCodeNode) (*HTMLTag, bool) {
 		out := NewHTMLTag("")
 		out.Name = "span"
-		out.Attrs["style"] = "color: " + node.GetOpeningTag().Value + ";"
+		sanitize := func(r rune) rune {
+			if r == '#' || r == ',' || r == '.' || r == '(' || r == ')' || r == '%' {
+				return r
+			} else if r >= '0' && r <= '9' {
+				return r
+			} else if r >= 'a' && r <= 'z' {
+				return r
+			} else if r >= 'A' && r <= 'Z' {
+				return r
+			}
+			return -1
+		}
+		color := strings.Map(sanitize, node.GetOpeningTag().Value)
+		out.Attrs["style"] = "color: " + color + ";"
 		return out, true
 	}
 
