@@ -28,7 +28,7 @@ fmt.Println(compiler.Compile("[b]Hello World[/b]"))
 [tag=value foo="hello world" bar=baz]multiple tag arguments[/tag]
 ```
 
-## Defailt Supported Tags
+## Default Tags
  * `[b]text[/b]` --> `<b>text</b>` (b, i, u, and s all map the same)
  * `[url]link[/url]` --> `<a href="link">link</a>`
  * `[url=link]text[/url]` --> `<a href="link">text</a>`
