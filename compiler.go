@@ -21,7 +21,10 @@ type Compiler struct {
 	EmojiReplacer *strings.Replacer
 }
 
-func NewCompiler(autoCloseTags, ignoreUnmatchedClosingTags bool, emoji map[string]string) Compiler {
+func NewCompiler(autoCloseTags, ignoreUnmatchedClosingTags bool) Compiler {
+	return NewCompilerWithEmoji(autoCloseTags, ignoreUnmatchedClosingTags, nil)
+}
+func NewCompilerWithEmoji(autoCloseTags, ignoreUnmatchedClosingTags bool, emoji map[string]string) Compiler {
 	compiler := Compiler{make(map[string]TagCompilerFunc), DefaultTagCompiler, autoCloseTags, ignoreUnmatchedClosingTags, nil}
 
 	for tag, compilerFunc := range DefaultTagCompilers {
