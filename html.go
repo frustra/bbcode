@@ -12,10 +12,11 @@ import (
 
 // HTMLTag represents a DOM node.
 type HTMLTag struct {
-	Name     string
-	Value    string
-	Attrs    map[string]string
-	Children []*HTMLTag
+	Name          string
+	Value         string
+	Attrs         map[string]string
+	EmojiReplacer *strings.Replacer
+	Children      []*HTMLTag
 }
 
 // NewHTMLTag creates a new HTMLTag with string contents specified by value.
@@ -32,6 +33,11 @@ func (t *HTMLTag) String() string {
 	if len(t.Value) > 0 {
 		value = html.EscapeString(t.Value)
 	}
+	if t.EmojiReplacer != nil {
+		//replacement for emoji
+		value = t.EmojiReplacer.Replace(value)
+	}
+
 	var attrString string
 	for key, value := range t.Attrs {
 		attrString += " " + key + `="` + strings.Replace(html.EscapeString(value), "\n", "", -1) + `"`
@@ -60,6 +66,13 @@ func (t *HTMLTag) AppendChild(child *HTMLTag) *HTMLTag {
 		t.Children = append(t.Children, child)
 	}
 	return t
+}
+
+func (t *HTMLTag) SetEmojiReplacer(r *strings.Replacer) {
+	t.EmojiReplacer = r
+	for _, child := range t.Children {
+		child.SetEmojiReplacer(r)
+	}
 }
 
 func InsertNewlines(out *HTMLTag) {

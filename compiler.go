@@ -17,14 +17,29 @@ type Compiler struct {
 	defaultCompiler            TagCompilerFunc
 	AutoCloseTags              bool
 	IgnoreUnmatchedClosingTags bool
+
+	EmojiReplacer *strings.Replacer
 }
 
 func NewCompiler(autoCloseTags, ignoreUnmatchedClosingTags bool) Compiler {
-	compiler := Compiler{make(map[string]TagCompilerFunc), DefaultTagCompiler, autoCloseTags, ignoreUnmatchedClosingTags}
+	return NewCompilerWithEmoji(autoCloseTags, ignoreUnmatchedClosingTags, nil)
+}
+func NewCompilerWithEmoji(autoCloseTags, ignoreUnmatchedClosingTags bool, emoji map[string]string) Compiler {
+	compiler := Compiler{make(map[string]TagCompilerFunc), DefaultTagCompiler, autoCloseTags, ignoreUnmatchedClosingTags, nil}
 
 	for tag, compilerFunc := range DefaultTagCompilers {
 		compiler.SetTag(tag, compilerFunc)
 	}
+
+	array := []string{}
+	if emoji != nil {
+		for key, value := range emoji {
+			img := `<img src="` + value + `" alt="` + key + `">`
+			array = append(array, key, img)
+		}
+	}
+	compiler.EmojiReplacer = strings.NewReplacer(array...)
+
 	return compiler
 }
 
@@ -56,6 +71,8 @@ func (c Compiler) CompileTree(node *BBCodeNode) *HTMLTag {
 	if node.ID == TEXT {
 		out.Value = node.Value.(string)
 		InsertNewlines(out)
+		out.SetEmojiReplacer(c.EmojiReplacer)
+
 		for _, child := range node.Children {
 			out.AppendChild(c.CompileTree(child))
 		}
