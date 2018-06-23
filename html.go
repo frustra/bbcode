@@ -7,6 +7,7 @@ package bbcode
 import (
 	"html"
 	"net/url"
+	"sort"
 	"strings"
 )
 
@@ -27,19 +28,39 @@ func NewHTMLTag(value string) *HTMLTag {
 	}
 }
 
+// The html representation of the tag with unsorted arguments.
 func (t *HTMLTag) String() string {
+	return t.Compile(false)
+}
+
+// The html representation of the tag with or without sorted arguments.
+func (t *HTMLTag) Compile(sorted bool) string {
 	var value string
 	if len(t.Value) > 0 {
 		value = html.EscapeString(t.Value)
 	}
+
 	var attrString string
-	for key, value := range t.Attrs {
-		attrString += " " + key + `="` + strings.Replace(html.EscapeString(value), "\n", "", -1) + `"`
+	if sorted {
+		var attrKeys []string
+		for key := range t.Attrs {
+			attrKeys = append(attrKeys, key)
+		}
+		sort.Strings(attrKeys)
+
+		for _, key := range attrKeys {
+			attrString += " " + key + `="` + strings.Replace(html.EscapeString(t.Attrs[key]), "\n", "", -1) + `"`
+		}
+	} else {
+		for key, value := range t.Attrs {
+			attrString += " " + key + `="` + strings.Replace(html.EscapeString(value), "\n", "", -1) + `"`
+		}
 	}
+
 	if len(t.Children) > 0 {
 		var childrenString string
 		for _, child := range t.Children {
-			childrenString += child.String()
+			childrenString += child.Compile(sorted)
 		}
 		if len(t.Name) > 0 {
 			return value + "<" + t.Name + attrString + ">" + childrenString + "</" + t.Name + ">"

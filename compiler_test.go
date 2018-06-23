@@ -73,8 +73,8 @@ var basicTests = map[string]string{
 	`[not a tag]`:        `[not a tag]`,
 }
 var basicMultiArgTests = map[string][]string{
-	`[img=http://example.com]alt text[/img]`: []string{`<img`, ` src="http://example.com"`, ` alt="alt text"`, ` title="alt text"`, `>`},
-	`[img = foo]bar[/img]`:                   []string{`<img`, ` src="foo"`, ` alt="bar"`, ` title="bar"`, `>`},
+	`[img=http://example.com]alt text[/img]`: []string{`<img`, ` alt="alt text"`, ` src="http://example.com"`, ` title="alt text"`, `>`},
+	`[img = foo]bar[/img]`:                   []string{`<img`, ` alt="bar"`, ` src="foo"`, ` title="bar"`, `>`},
 }
 
 func TestCompile(t *testing.T) {
@@ -93,6 +93,22 @@ func TestCompile(t *testing.T) {
 		for i := 1; i < len(out)-1; i++ {
 			if !strings.Contains(result, out[i]) {
 				t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", in, out, result)
+			}
+		}
+	}
+}
+
+func TestSortedAttributes(t *testing.T) {
+	c := NewCompiler(false, false)
+	c.SortOutputAttributes = true
+	// Test this 10 times to eliminate randomness
+	for i := 0; i < 10; i++ {
+		for in, out := range basicMultiArgTests {
+			result := c.Compile(in)
+			compare := strings.Join(out, "")
+			if result != compare {
+				t.Errorf("Failed to compile %s.\nExpected: %s, got: %s\n", in, compare, result)
+				return
 			}
 		}
 	}

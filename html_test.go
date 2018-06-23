@@ -8,7 +8,7 @@ import "testing"
 
 var urlTests = map[string]string{
 	"http://example.com/path?query=value#fragment":         "http://example.com/path?query=value#fragment",
-	"<script>http://example.com":                           "%3Cscript%3Ehttp://example.com",
+	"<script>http://example.com":                           "",
 	"http://example.com/path?query=value#fragment<script>": "http://example.com/path?query=value#fragment%3Cscript%3E",
 	"http://example.com/path?query=<script>":               "http://example.com/path?query=<script>",
 	"javascript:alert(1);":                                 "javascript:alert(1);",

@@ -45,6 +45,13 @@ fmt.Println(compiler.Compile("[b]Hello World[/b]"))
 Lists are not currently implemented as a default tag, but can be added as a custom tag.  
 A working implementation of list tags can be found [here](https://gist.github.com/xthexder/44f4b9cec3ed7876780d)
 
+## Notes
+ - If using with user-supplied input, it's recommended to modify the url tag to sanitize links.
+By default, urls such as `javascript:alert(1);` are valid.
+
+ - For HTML tags with multiple attributes, the ordering is not sorted by default. If you need deterministic output, set `compiler.SortOutputAttributes` to true.
+This may slightly reduce the compiler performance.
+
 ## Adding Custom Tags
 Custom tag handlers can be added to a compiler using the `compiler.SetTag(tag, handler)` function:
 ```go
