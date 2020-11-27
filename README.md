@@ -1,4 +1,4 @@
-# bbcode [![Build Status](https://travis-ci.org/frustra/bbcode.png?branch=master)](http://travis-ci.org/frustra/bbcode)
+# bbcode
 
 frustra/bbcode is a fast BBCode compiler for Go. It supports custom tags, safe html output (for user-specified input),
 and allows for graceful parsing of syntax errors similar to the output of a regex bbcode compiler.
